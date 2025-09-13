@@ -1,0 +1,18 @@
+{
+	"folders": [
+		{
+			"path": "ai-ml-learning"
+		},
+		{
+			"path": "../Downloads/Refactored_Py_DS_ML_Bootcamp-master 2"
+		},
+		{
+			"name": "intro-to-cloud-on-aws",
+			"path": "awsintro/intro-to-cloud-on-aws"
+		},
+		{
+			"path": "dev-productivity-agents"
+		}
+	],
+	"settings": {}
+}

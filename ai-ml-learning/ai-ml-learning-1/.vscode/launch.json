@@ -1,0 +1,17 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "Run app.py (Ollama)",
+        "type": "python",
+        "request": "launch",
+        "program": "${workspaceFolder}/app.py",
+        "console": "integratedTerminal",
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "OPENAI_BASE_URL": "http://localhost:11434/v1",
+          "OPENAI_API_KEY": "ollama"
+        }
+      }
+    ]
+  }

@@ -1,0 +1,8 @@
+def sumNaturalNumbers(number):
+    sum_of_numbers = 0
+    for i in range(1, number+1):
+        sum_of_numbers += i
+    return sum_of_numbers
+
+sum_of_numbers = sumNaturalNumbers(20)
+print(f"The sum of numbers is : {sum_of_numbers}")
