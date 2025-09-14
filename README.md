@@ -10,6 +10,8 @@ The focus is on blending **rule-based heuristics** with **optional AI enrichment
 - Engineers often spend significant time debugging builds and writing repetitive tests.
 - These prototypes show how **automation + AI agents** can reduce friction and speed up delivery.
 
+![CI](https://github.com/pushkarsambhus/dev-productivity-agents/actions/workflows/ci.yml/badge.svg)
+
 ## Quick Start
 ```bash
 python3 -m venv .venv
