@@ -10,6 +10,15 @@ The focus is on blending **rule-based heuristics** with **optional AI enrichment
 - Engineers often spend significant time debugging builds and writing repetitive tests.
 - These prototypes show how **automation + AI agents** can reduce friction and speed up delivery.
 
+### Why This Matters
+Build failures and pipeline issues often waste hours of developer time. By automating triage and test case suggestions, this project reduces manual toil, accelerates CI/CD cycles, and improves developer productivity across large teams.
+
+### Trade-offs & Design Choices
+- **Heuristics-first:** Designed to provide quick, offline answers; optional LLM integration adds richer suggestions but requires cost/API keys.
+- **Slack + API integration:** Chosen for accessibility; in production, this would extend to other collaboration tools and dashboards.
+- **Scope:** Prototype-level agent; production deployments would need stronger observability and caching.
+
+
 ![CI](https://github.com/pushkarsambhus/dev-productivity-agents/actions/workflows/ci.yml/badge.svg)
 
 ## Quick Start
