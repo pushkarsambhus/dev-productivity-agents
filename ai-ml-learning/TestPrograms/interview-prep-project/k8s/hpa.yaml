@@ -1,0 +1,336 @@
+# ==============================================================================
+# HORIZONTAL POD AUTOSCALER (HPA)
+# ==============================================================================
+#
+# WHAT IS HPA?
+# Automatically scales the number of pods based on metrics
+# - CPU utilization
+# - Memory utilization
+# - Custom metrics (request rate, queue length, etc.)
+#
+# HORIZONTAL vs VERTICAL SCALING:
+# - Horizontal (HPA): Add more pods (scale out)
+# - Vertical (VPA): Give pods more CPU/memory (scale up)
+#
+# INTERVIEW TIP: Most apps scale horizontally
+# - Easier to implement (stateless apps)
+# - Better fault tolerance (more instances)
+# - Limited by application architecture (stateful apps harder to scale)
+#
+# REQUIREMENTS:
+# - Metrics Server must be installed in cluster
+# - Pods must have resource requests defined
+#
+# HOW IT WORKS:
+# 1. HPA checks metrics every 15 seconds (default)
+# 2. Calculates desired replicas: ceil(currentReplicas * currentMetric / targetMetric)
+# 3. Updates Deployment replica count
+# 4. Deployment creates/deletes pods
+#
+# ==============================================================================
+
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: interview-prep-api-hpa
+  namespace: interview-prep
+  labels:
+    app: interview-prep-api
+spec:
+  # TARGET: What to scale
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: interview-prep-api
+
+  # REPLICA BOUNDS
+  # CONCEPT: Limits for auto-scaling
+  # minReplicas: Always keep at least this many (high availability)
+  # maxReplicas: Never exceed this (cost control, resource limits)
+  #
+  # INTERVIEW TIP: Choose wisely
+  # - Min too low: Slow to respond to traffic spikes
+  # - Min too high: Wasted resources during low traffic
+  # - Max too low: Can't handle peak load
+  # - Max too high: Unexpected costs, resource exhaustion
+  minReplicas: 2    # Always at least 2 (HA)
+  maxReplicas: 10   # Never more than 10
+
+  # METRICS: What to scale on
+  # CONCEPT: Define thresholds that trigger scaling
+  # Can use multiple metrics (scales if ANY metric threshold is exceeded)
+  metrics:
+  # METRIC 1: CPU Utilization
+  # INTERVIEW TIP: Most common metric for scaling
+  # - Easy to understand
+  # - Works for most CPU-bound apps
+  # - Not ideal for I/O-bound or bursty workloads
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        # TARGET: 70% of requested CPU
+        # CONCEPT: Not 100% because:
+        # - Leaves headroom for spikes
+        # - Prevents constant scaling up/down (thrashing)
+        # - Time to scale (new pods take time to start)
+        averageUtilization: 70
+
+  # METRIC 2: Memory Utilization
+  # INTERVIEW TIP: Be careful with memory scaling
+  # - Memory usually grows over time (caches, buffers)
+  # - Scaling down might cause OOMKilled
+  # - Better to use CPU for scaling decisions
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80  # Higher threshold for memory
+
+  # METRIC 3: Custom Metrics (Advanced)
+  # INTERVIEW TIP: More sophisticated scaling
+  # Examples:
+  # - Request rate (requests per second)
+  # - Queue depth (background jobs)
+  # - Response time (latency)
+  # - Business metrics (active users, transactions)
+  #
+  # Requires:
+  # - Metrics adapter (Prometheus Adapter, Datadog, etc.)
+  # - Application to expose metrics
+  #
+  # Example (commented out - requires Prometheus):
+  # - type: Pods
+  #   pods:
+  #     metric:
+  #       name: http_requests_per_second
+  #     target:
+  #       type: AverageValue
+  #       averageValue: "1000"  # Scale if >1000 req/s per pod
+
+  # BEHAVIOR: Fine-tune scaling behavior (optional)
+  # CONCEPT: Control how fast/slow to scale
+  # Prevents:
+  # - Thrashing (rapid scale up/down)
+  # - Slow response to traffic spikes
+  # - Expensive rapid scaling
+  behavior:
+    scaleDown:
+      # STABILIZATION WINDOW: Wait this long before scaling down
+      # INTERVIEW TIP: Prevents premature scale-down
+      # - Traffic might spike again
+      # - Starting pods is slow, killing is fast
+      # - Conservative with scale-down
+      stabilizationWindowSeconds: 300  # 5 minutes
+
+      # POLICIES: How many pods to remove at once
+      policies:
+      # Remove at most 1 pod per minute
+      - type: Pods
+        value: 1
+        periodSeconds: 60
+      # Remove at most 10% of pods per minute
+      - type: Percent
+        value: 10
+        periodSeconds: 60
+      # HPA uses the most conservative policy (smaller reduction)
+      selectPolicy: Min
+
+    scaleUp:
+      # STABILIZATION WINDOW: Wait this long before scaling up
+      # INTERVIEW TIP: Shorter than scale-down
+      # - Need to respond quickly to traffic spikes
+      # - Users waiting for service
+      stabilizationWindowSeconds: 60  # 1 minute
+
+      # POLICIES: How many pods to add at once
+      policies:
+      # Add at most 2 pods per minute
+      - type: Pods
+        value: 2
+        periodSeconds: 60
+      # Add at most 50% more pods per minute
+      - type: Percent
+        value: 50
+        periodSeconds: 60
+      # HPA uses the most aggressive policy (larger increase)
+      selectPolicy: Max
+
+# ==============================================================================
+# USAGE
+# ==============================================================================
+#
+# Install Metrics Server (if not already installed):
+#   kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+#
+#   # For Minikube:
+#   minikube addons enable metrics-server
+#
+# Verify Metrics Server:
+#   kubectl top nodes
+#   kubectl top pods -n interview-prep
+#
+# Create HPA:
+#   kubectl apply -f k8s/hpa.yaml
+#
+# View HPA:
+#   kubectl get hpa -n interview-prep
+#   kubectl describe hpa interview-prep-api-hpa -n interview-prep
+#
+# Watch HPA in action:
+#   kubectl get hpa -n interview-prep --watch
+#
+# Generate load (to trigger scaling):
+#   # From inside cluster:
+#   kubectl run -it --rm load-generator --image=busybox -n interview-prep -- /bin/sh
+#   while true; do wget -q -O- http://interview-prep-api/agent/tools; done
+#
+#   # From outside (if using LoadBalancer/Ingress):
+#   # Use tools like: ab, wrk, hey, k6, locust
+#   ab -n 100000 -c 100 http://<your-endpoint>/health
+#
+# View current metrics:
+#   kubectl get hpa interview-prep-api-hpa -n interview-prep -o yaml
+#   # Look at: currentMetrics, currentReplicas
+#
+# Delete HPA:
+#   kubectl delete -f k8s/hpa.yaml
+#
+# ==============================================================================
+# INTERVIEW TALKING POINTS - AUTOSCALING
+# ==============================================================================
+#
+# 1. Why Autoscaling?
+#    - Handle variable traffic (day vs night, weekday vs weekend)
+#    - Cost optimization (pay only for what you need)
+#    - Reliability (scale up during spikes)
+#    - Efficiency (scale down during quiet periods)
+#
+# 2. Scaling Calculation:
+#    Formula: desiredReplicas = ceil(currentReplicas * currentMetric / targetMetric)
+#
+#    Example:
+#    - Current: 3 pods
+#    - Current CPU: 90%
+#    - Target CPU: 70%
+#    - Desired: ceil(3 * 90 / 70) = ceil(3.86) = 4 pods
+#
+# 3. HPA Limitations:
+#    - Minimum scale interval: ~15 seconds to check metrics
+#    - Pod startup time: Minutes for slow-starting apps
+#    - Cold starts: First requests to new pod might be slow
+#    - Doesn't scale to 0 (use KEDA for that)
+#    - Only scales pods, not resources per pod (use VPA)
+#
+# 4. Best Practices:
+#    - Set resource requests (required for HPA)
+#    - Use conservative targets (70% not 90%)
+#    - Set appropriate min/max replicas
+#    - Longer stabilization for scale-down (avoid thrashing)
+#    - Monitor actual usage to tune thresholds
+#    - Combine with Cluster Autoscaler (scale nodes too)
+#
+# 5. Metrics Sources:
+#    Built-in (Metrics Server):
+#    - CPU
+#    - Memory
+#
+#    Custom (requires adapter):
+#    - Prometheus metrics
+#    - Application metrics (request rate, queue depth)
+#    - Business metrics (active users, revenue)
+#    - External metrics (SQS queue, Datadog)
+#
+# 6. Scaling Patterns:
+#    Predictable traffic:
+#    - Schedule-based scaling (higher min during business hours)
+#    - Use CronJobs to adjust HPA min/max
+#
+#    Unpredictable traffic:
+#    - Reactive HPA (what we implemented)
+#    - Fast scale-up, slow scale-down
+#
+#    Batch processing:
+#    - Scale based on queue depth
+#    - KEDA for event-driven scaling
+#
+# 7. Cloud Provider Integration:
+#    AWS:
+#    - Cluster Autoscaler: Scales EC2 nodes
+#    - Fargate: Serverless, auto-scales
+#    - Karpenter: Advanced node autoscaling
+#    - CloudWatch metrics for custom scaling
+#
+#    GCP:
+#    - GKE Cluster Autoscaler
+#    - Workload Identity
+#    - Cloud Monitoring metrics
+#
+#    Azure:
+#    - AKS Cluster Autoscaler
+#    - Virtual Nodes (serverless)
+#    - Azure Monitor metrics
+#
+# 8. Complete Scaling Stack:
+#    Layer 1: HPA (scale pods)
+#    Layer 2: Cluster Autoscaler (scale nodes)
+#    Layer 3: VPA (adjust pod resources)
+#
+#    Together: Full auto-scaling
+#    - HPA adds pods when needed
+#    - Cluster Autoscaler adds nodes for new pods
+#    - VPA right-sizes pods over time
+#
+# 9. Troubleshooting:
+#    HPA not scaling:
+#    - Metrics Server not installed
+#    - No resource requests on pods
+#    - Metrics not available yet (wait 1-2 min)
+#    - Already at min/max replicas
+#
+#    HPA thrashing (constant scale up/down):
+#    - Target too aggressive (lower threshold)
+#    - Increase stabilization window
+#    - Bursty traffic (use longer averages)
+#
+#    Slow scaling:
+#    - Increase scale-up policy values
+#    - Decrease stabilization window
+#    - Optimize pod startup time
+#
+# 10. Cost Optimization:
+#     - Scale down during off-hours (lower min)
+#     - Use Spot Instances for non-critical workloads
+#     - Right-size requests (VPA can help)
+#     - Set appropriate max to prevent runaway costs
+#     - Monitor actual usage vs provisioned
+#
+# ==============================================================================
+# ADVANCED: KEDA (Kubernetes Event-Driven Autoscaling)
+# ==============================================================================
+#
+# KEDA extends HPA with:
+# - Scale to zero (save costs when idle)
+# - Event-driven scaling (not just metrics)
+# - 50+ scalers (SQS, Kafka, HTTP, Cron, etc.)
+#
+# Example: Scale based on AWS SQS queue depth
+# apiVersion: keda.sh/v1alpha1
+# kind: ScaledObject
+# metadata:
+#   name: api-scaler
+# spec:
+#   scaleTargetRef:
+#     name: interview-prep-api
+#   minReplicaCount: 0  # Scale to zero!
+#   maxReplicaCount: 20
+#   triggers:
+#   - type: aws-sqs-queue
+#     metadata:
+#       queueURL: https://sqs.us-east-1.amazonaws.com/123456/my-queue
+#       queueLength: "5"
+#       awsRegion: "us-east-1"
+#
+# ==============================================================================

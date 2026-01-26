@@ -1,0 +1,206 @@
+###
+# Interview Prep API - Example Requests
+# ======================================
+#
+# This file contains example HTTP requests you can use to test the API.
+#
+# HOW TO USE:
+# 1. VS Code: Install "REST Client" extension, click "Send Request" above each request
+# 2. curl: Copy the curl commands below
+# 3. Postman: Import as collection
+# 4. Browser: Visit http://localhost:8000/docs for interactive API docs
+#
+###
+
+# ============================================================================
+# BASIC ENDPOINTS
+# ============================================================================
+
+### Health Check - Is the API running?
+GET http://localhost:8000/health
+Content-Type: application/json
+
+### Root Endpoint - API information
+GET http://localhost:8000/
+Content-Type: application/json
+
+### API Documentation (Swagger UI)
+# Open in browser: http://localhost:8000/docs
+
+# ============================================================================
+# AGENT ENDPOINTS
+# ============================================================================
+
+### List Available Tools
+GET http://localhost:8000/agent/tools
+Content-Type: application/json
+
+### Agent Task - Calculator
+POST http://localhost:8000/agent/task
+Content-Type: application/json
+
+{
+  "task": "Calculate 15 + 27",
+  "context": {}
+}
+
+### Agent Task - Weather
+POST http://localhost:8000/agent/task
+Content-Type: application/json
+
+{
+  "task": "What's the weather in San Francisco?",
+  "context": {
+    "user_id": "123"
+  }
+}
+
+### Agent Task - Search (Knowledge Base)
+POST http://localhost:8000/agent/task
+Content-Type: application/json
+
+{
+  "task": "What is Kubernetes?",
+  "context": {}
+}
+
+### Agent Task - Time
+POST http://localhost:8000/agent/task
+Content-Type: application/json
+
+{
+  "task": "What time is it?",
+  "context": {}
+}
+
+### Agent Task - Complex Math
+POST http://localhost:8000/agent/task
+Content-Type: application/json
+
+{
+  "task": "Calculate (15 + 27) * 2 - 10",
+  "context": {}
+}
+
+# ============================================================================
+# CACHE ENDPOINTS
+# ============================================================================
+
+### Get Cache Statistics
+GET http://localhost:8000/cache/stats
+Content-Type: application/json
+
+### Clear Cache
+DELETE http://localhost:8000/cache/clear
+Content-Type: application/json
+
+# ============================================================================
+# TESTING CACHE BEHAVIOR
+# ============================================================================
+
+### First Request - Should miss cache
+POST http://localhost:8000/agent/task
+Content-Type: application/json
+
+{
+  "task": "Calculate 100 + 200",
+  "context": {}
+}
+
+### Second Request - Should hit cache (cached=true)
+# Run immediately after first request
+POST http://localhost:8000/agent/task
+Content-Type: application/json
+
+{
+  "task": "Calculate 100 + 200",
+  "context": {}
+}
+
+# ============================================================================
+# CURL COMMANDS (for terminal)
+# ============================================================================
+
+# Health check
+# curl http://localhost:8000/health
+
+# Agent task
+# curl -X POST http://localhost:8000/agent/task \
+#   -H "Content-Type: application/json" \
+#   -d '{"task": "Calculate 15 + 27", "context": {}}'
+
+# List tools
+# curl http://localhost:8000/agent/tools
+
+# Cache stats
+# curl http://localhost:8000/cache/stats
+
+# Clear cache
+# curl -X DELETE http://localhost:8000/cache/clear
+
+# ============================================================================
+# KUBERNETES PORT-FORWARD (if running in K8s)
+# ============================================================================
+
+# First, port-forward the service:
+# kubectl port-forward service/interview-prep-api 8000:80 -n interview-prep
+
+# Then use the same requests above (they work with K8s too!)
+
+# ============================================================================
+# TESTING SCENARIOS
+# ============================================================================
+
+### Scenario 1: Test All Tools
+# Run each request in sequence to test all agent tools
+
+### Scenario 2: Cache Performance
+# 1. Clear cache
+# 2. Run same request 5 times
+# 3. Check cache stats
+# 4. First request: cached=false
+# 5. Remaining requests: cached=true
+
+### Scenario 3: Different Inputs
+# Try various calculation expressions:
+# - "15 + 27"
+# - "100 * 2 + 50"
+# - "(10 + 5) * 3"
+
+### Scenario 4: Error Handling
+# Try invalid requests to test error handling:
+POST http://localhost:8000/agent/task
+Content-Type: application/json
+
+{
+  "task": ""
+}
+
+# ============================================================================
+# INTERVIEW QUESTIONS TO DISCUSS
+# ============================================================================
+#
+# While testing, think about:
+#
+# 1. Why does the second identical request return faster?
+#    Answer: Cache hit - data returned from Redis, not recomputed
+#
+# 2. What happens if Redis is down?
+#    Answer: API still works (graceful degradation), just slower
+#
+# 3. How would you test this API automatically?
+#    Answer: pytest with TestClient, test each endpoint
+#
+# 4. How would you monitor this in production?
+#    Answer: CloudWatch/Prometheus for metrics, error tracking, logs
+#
+# 5. What if cache gets too large?
+#    Answer: Redis eviction policies (LRU), shorter TTL, or larger instance
+#
+# 6. How to handle high traffic?
+#    Answer: Horizontal scaling (HPA in K8s), load balancer, CDN
+#
+# 7. Security concerns?
+#    Answer: Auth (JWT), rate limiting, input validation, HTTPS
+#
+# ============================================================================

@@ -1,0 +1,118 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Current File",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "stopOnEntry": true,
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Python: Debug Test Programs - List&Tuples",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/TestPrograms/List&Tuples.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "stopOnEntry": true,
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Python: Debug Test Programs - product_of_odd_digits",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/TestPrograms/product_of_odd_digits.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "stopOnEntry": true,
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Python: Debug Test Programs - opposite_pairs_sum",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/TestPrograms/opposite_pairs_sum.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "stopOnEntry": true,
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Python: Debug Test Programs - reversecounterpart",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/TestPrograms/reversecounterpart.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "stopOnEntry": true,
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Python: Debug Test Programs - reverse_integer_math",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/TestPrograms/reverse_integer_math.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "stopOnEntry": true,
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Python: Debug Test Programs - duplicate_number",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/TestPrograms/duplicate_number.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "stopOnEntry": true,
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Python: Debug Test Programs - TwoSums",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/TestPrograms/TwoSums.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "stopOnEntry": true,
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Python: Debug app.py",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/ai-ml-learning-1/app.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "cwd": "${workspaceFolder}/ai-ml-learning-1",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/ai-ml-learning-1"
+            }
+        },
+        {
+            "name": "Python: Debug with Arguments",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "args": [],
+            "justMyCode": true,
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Python: Attach",
+            "type": "debugpy",
+            "request": "attach",
+            "connect": {
+                "host": "localhost",
+                "port": 5678
+            },
+            "justMyCode": false
+        }
+    ]
+}
+

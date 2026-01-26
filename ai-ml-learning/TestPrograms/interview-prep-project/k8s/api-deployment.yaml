@@ -1,0 +1,395 @@
+# ==============================================================================
+# API DEPLOYMENT
+# ==============================================================================
+#
+# This Deployment manages our FastAPI application Pods.
+# Demonstrates production Kubernetes patterns for stateless applications.
+#
+# ==============================================================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: interview-prep-api
+  namespace: interview-prep
+  labels:
+    app: interview-prep-api
+    tier: backend
+    version: v1
+spec:
+  # REPLICAS: Run multiple instances for:
+  # - High availability (if one pod fails, others handle traffic)
+  # - Load distribution (spread traffic across pods)
+  # - Rolling updates (replace pods gradually)
+  #
+  # INTERVIEW TIP: In production:
+  # - Start with 2-3 for HA
+  # - Use HorizontalPodAutoscaler to scale based on CPU/memory/custom metrics
+  replicas: 2
+
+  # STRATEGY: How to update pods
+  # RollingUpdate: Gradually replace old pods with new ones (default)
+  # Recreate: Kill all old pods, then create new ones (downtime)
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      # MAX UNAVAILABLE: How many pods can be down during update
+      # 1 = Always keep at least 1 pod running
+      # 25% = Can take down 25% of pods at a time
+      maxUnavailable: 1
+
+      # MAX SURGE: How many extra pods during update
+      # 1 = Can create 1 extra pod during update
+      # Allows faster updates but uses more resources
+      maxSurge: 1
+
+  selector:
+    matchLabels:
+      app: interview-prep-api
+      tier: backend
+
+  template:
+    metadata:
+      labels:
+        app: interview-prep-api
+        tier: backend
+        version: v1
+      # ANNOTATIONS: Metadata that doesn't identify the object
+      # Used by tools, operators, or for documentation
+      annotations:
+        # Prometheus scraping (if using Prometheus for monitoring)
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    spec:
+      # SERVICE ACCOUNT: Identity for pods to access K8s API
+      # INTERVIEW TIP: Pods can talk to K8s API (list pods, create resources)
+      # Service accounts control permissions (RBAC)
+      # serviceAccountName: api-service-account  # Uncomment if using RBAC
+
+      # SECURITY CONTEXT: Pod-level security settings
+      # INTERVIEW TIP: Defense in depth - multiple security layers
+      securityContext:
+        # Run as non-root (matches Dockerfile USER directive)
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+
+      containers:
+      - name: api
+        # IMAGE: Replace with your actual image
+        # In production:
+        # - Push to registry (Docker Hub, ECR, GCR, etc.)
+        # - Use specific tags, not 'latest'
+        # - Include git commit hash for traceability
+        # Example: 123456789.dkr.ecr.us-east-1.amazonaws.com/interview-prep-api:v1.0.0-abc123
+        image: interview-prep-api:latest
+        imagePullPolicy: IfNotPresent  # Change to Always in production
+
+        ports:
+        - containerPort: 8000
+          name: http
+          protocol: TCP
+
+        # ENVIRONMENT VARIABLES
+        # CONCEPT: Configuration injection
+        # - From ConfigMap (non-sensitive)
+        # - From Secret (sensitive)
+        # - Direct values (simple cases)
+        env:
+        # From ConfigMap
+        - name: REDIS_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: api-config
+              key: REDIS_HOST
+        - name: REDIS_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: api-config
+              key: REDIS_PORT
+        - name: REDIS_DB
+          valueFrom:
+            configMapKeyRef:
+              name: api-config
+              key: REDIS_DB
+
+        # Example: From Secret (for sensitive data)
+        # - name: DATABASE_PASSWORD
+        #   valueFrom:
+        #     secretKeyRef:
+        #       name: api-secrets
+        #       key: db-password
+
+        # Direct values
+        - name: ENVIRONMENT
+          value: "production"
+
+        # RESOURCE LIMITS
+        # INTERVIEW TIP: Always set resources in production
+        # - Prevents resource starvation
+        # - Enables proper scheduling
+        # - Required for autoscaling
+        #
+        # HOW TO CHOOSE VALUES:
+        # 1. Run load tests
+        # 2. Monitor actual usage
+        # 3. Set requests = typical usage
+        # 4. Set limits = peak usage + buffer
+        resources:
+          requests:
+            memory: "256Mi"   # Need at least 256Mi RAM
+            cpu: "250m"       # Need at least 0.25 CPU
+          limits:
+            memory: "512Mi"   # Can use up to 512Mi RAM
+            cpu: "500m"       # Can use up to 0.5 CPU
+
+        # LIVENESS PROBE: Is the application alive?
+        # CONCEPT: Detect and recover from failures
+        # - Application hangs/deadlocks
+        # - Infinite loops
+        # - Unrecoverable errors
+        #
+        # If liveness fails → K8s restarts container
+        livenessProbe:
+          httpGet:
+            path: /health      # Our health check endpoint
+            port: 8000
+            scheme: HTTP
+          initialDelaySeconds: 30  # Wait 30s after start before first check
+          periodSeconds: 10        # Check every 10 seconds
+          timeoutSeconds: 5        # Fail if no response in 5 seconds
+          failureThreshold: 3      # Restart after 3 consecutive failures
+          successThreshold: 1      # One success = healthy
+
+        # READINESS PROBE: Is the application ready for traffic?
+        # CONCEPT: Don't send traffic until ready
+        # - Application starting up
+        # - Loading data/configuration
+        # - Warming up caches
+        # - Dependencies unavailable
+        #
+        # If readiness fails → Remove from Service endpoints (no traffic)
+        # INTERVIEW TIP: Readiness != Liveness
+        # - Readiness: Temporary issue, might recover (don't restart)
+        # - Liveness: Serious issue, won't recover (restart)
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+            scheme: HTTP
+          initialDelaySeconds: 10  # Start checking after 10s
+          periodSeconds: 5         # Check every 5 seconds
+          timeoutSeconds: 3
+          failureThreshold: 3
+          successThreshold: 1
+
+        # STARTUP PROBE: Initial startup (for slow-starting apps)
+        # CONCEPT: Give more time for initial startup
+        # - Liveness/readiness might fail during slow startup
+        # - Startup probe disables other probes until it succeeds
+        # - Once startup succeeds, liveness/readiness take over
+        #
+        # INTERVIEW TIP: Useful for:
+        # - Legacy apps with slow startup
+        # - Loading large datasets
+        # - Complex initialization
+        # startupProbe:
+        #   httpGet:
+        #     path: /health
+        #     port: 8000
+        #   failureThreshold: 30    # 30 * 10s = 5 minutes to start
+        #   periodSeconds: 10
+
+        # CONTAINER SECURITY CONTEXT
+        # INTERVIEW TIP: Security best practices
+        securityContext:
+          # Prevent privilege escalation
+          allowPrivilegeEscalation: false
+          # Read-only root filesystem (app can't write to /)
+          # readOnlyRootFilesystem: true  # Uncomment if app doesn't need to write
+          # Drop all capabilities (Linux capabilities)
+          capabilities:
+            drop:
+            - ALL
+
+      # RESTART POLICY: What to do if container exits
+      # Always: Always restart (default for Deployments)
+      # OnFailure: Restart only on failure
+      # Never: Don't restart
+      restartPolicy: Always
+
+      # DNS POLICY: How to resolve DNS
+      # ClusterFirst: Use K8s DNS first, then node DNS
+      # Default: Inherit from node
+      # None: Custom DNS config
+      dnsPolicy: ClusterFirst
+
+      # TERMINATION GRACE PERIOD
+      # CONCEPT: How long to wait before killing pod during shutdown
+      # 1. K8s sends SIGTERM to containers
+      # 2. Waits this many seconds
+      # 3. If still running, sends SIGKILL (force kill)
+      #
+      # INTERVIEW TIP: Graceful shutdown
+      # - Finish in-flight requests
+      # - Close connections
+      # - Save state
+      # FastAPI handles SIGTERM automatically
+      terminationGracePeriodSeconds: 30
+
+---
+# ==============================================================================
+# API SERVICE
+# ==============================================================================
+#
+# Service provides:
+# - Stable network endpoint
+# - Load balancing across pod replicas
+# - Service discovery (DNS name)
+#
+# ==============================================================================
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: interview-prep-api
+  namespace: interview-prep
+  labels:
+    app: interview-prep-api
+    tier: backend
+spec:
+  # TYPE: How to expose the service
+  #
+  # ClusterIP (default):
+  # - Internal only
+  # - Accessible within cluster
+  # - Use for internal services (APIs, databases)
+  #
+  # NodePort:
+  # - Accessible externally on <NodeIP>:<NodePort>
+  # - K8s allocates port 30000-32767
+  # - Not recommended for production (security, port management)
+  #
+  # LoadBalancer:
+  # - Cloud provider creates external load balancer
+  # - In AWS: Creates ELB/ALB/NLB
+  # - Recommended for production external access
+  # - Costs money (cloud LB charge)
+  #
+  # INTERVIEW TIP: Common production pattern:
+  # - External: Ingress (nginx, ALB) → LoadBalancer Service
+  # - Internal: ClusterIP services
+  type: ClusterIP
+
+  # Change to LoadBalancer for external access:
+  # type: LoadBalancer
+
+  selector:
+    app: interview-prep-api
+    tier: backend
+
+  ports:
+  - port: 80           # Service port (what clients connect to)
+    targetPort: 8000   # Container port (where traffic goes)
+    protocol: TCP
+    name: http
+
+  # SESSION AFFINITY: Sticky sessions
+  # INTERVIEW TIP: Most apps don't need this (stateless)
+  # Use when:
+  # - WebSocket connections
+  # - Non-distributed sessions
+  # - Testing
+  sessionAffinity: None
+
+# ==============================================================================
+# USAGE
+# ==============================================================================
+#
+# IMPORTANT: Build and push image first!
+#   docker build -t interview-prep-api:latest .
+#
+#   # For production, push to registry:
+#   docker tag interview-prep-api:latest <your-registry>/interview-prep-api:v1.0.0
+#   docker push <your-registry>/interview-prep-api:v1.0.0
+#
+# Deploy API:
+#   kubectl apply -f k8s/api-deployment.yaml
+#
+# Check deployment:
+#   kubectl get deployment interview-prep-api -n interview-prep
+#   kubectl rollout status deployment/interview-prep-api -n interview-prep
+#
+# View pods:
+#   kubectl get pods -n interview-prep -l app=interview-prep-api
+#   kubectl get pods -n interview-prep -l app=interview-prep-api -o wide  # Show node, IP
+#
+# View service:
+#   kubectl get service interview-prep-api -n interview-prep
+#
+# Describe service (see endpoints):
+#   kubectl describe service interview-prep-api -n interview-prep
+#
+# View logs:
+#   kubectl logs -f deployment/interview-prep-api -n interview-prep
+#   kubectl logs -f <pod-name> -n interview-prep  # Specific pod
+#
+# Execute command in pod:
+#   kubectl exec -it <pod-name> -n interview-prep -- /bin/bash
+#
+# Port forward (access locally):
+#   kubectl port-forward service/interview-prep-api 8000:80 -n interview-prep
+#   # Now access: http://localhost:8000
+#
+# Scale deployment:
+#   kubectl scale deployment/interview-prep-api --replicas=5 -n interview-prep
+#
+# Update image (rolling update):
+#   kubectl set image deployment/interview-prep-api api=interview-prep-api:v2.0.0 -n interview-prep
+#
+# Rollback:
+#   kubectl rollout undo deployment/interview-prep-api -n interview-prep
+#
+# View rollout history:
+#   kubectl rollout history deployment/interview-prep-api -n interview-prep
+#
+# Delete:
+#   kubectl delete -f k8s/api-deployment.yaml
+#
+# ==============================================================================
+# TROUBLESHOOTING
+# ==============================================================================
+#
+# Pod not starting:
+#   kubectl describe pod <pod-name> -n interview-prep
+#   kubectl logs <pod-name> -n interview-prep
+#   # Common issues:
+#   # - Image pull errors (wrong registry, auth)
+#   # - Resource limits (not enough CPU/memory on node)
+#   # - ConfigMap/Secret not found
+#   # - Application crashes on startup
+#
+# Pod crashing (CrashLoopBackOff):
+#   kubectl logs <pod-name> -n interview-prep --previous  # Logs from crashed container
+#   # Common issues:
+#   # - Application error on startup
+#   # - Missing environment variables
+#   # - Can't connect to dependencies
+#
+# Service not routing traffic:
+#   kubectl describe service interview-prep-api -n interview-prep
+#   # Check "Endpoints" - should list pod IPs
+#   # If no endpoints:
+#   # - Selector doesn't match pod labels
+#   # - Pods not ready (readiness probe failing)
+#
+# Can't access service:
+#   # From inside cluster:
+#   kubectl run -it --rm debug --image=curlimages/curl -n interview-prep -- sh
+#   curl http://interview-prep-api/health
+#
+#   # From outside cluster:
+#   kubectl port-forward service/interview-prep-api 8000:80 -n interview-prep
+#
+# ==============================================================================

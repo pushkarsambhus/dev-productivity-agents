@@ -1,0 +1,28 @@
+# Core API Framework
+fastapi==0.104.1        # Modern, fast web framework for building APIs
+uvicorn==0.24.0         # ASGI server to run FastAPI (production-ready)
+pydantic==2.5.0         # Data validation using Python type hints
+
+# Caching
+redis==5.0.1            # Redis client for Python
+
+# Utilities
+python-dotenv==1.0.0    # Load environment variables from .env file
+
+# Development & Testing
+pytest==7.4.3           # Testing framework
+httpx==0.25.1           # HTTP client for testing FastAPI endpoints
+pytest-asyncio==0.21.1  # Async support for pytest
+
+# INTERVIEW TIP: Why these specific versions?
+# - Pinning versions ensures reproducibility
+# - Prevents "works on my machine" issues
+# - Critical for production deployments
+# - Use requirements.txt for production
+# - Use requirements-dev.txt for dev tools (linters, etc.)
+
+# In production, also consider:
+# - gunicorn: Production WSGI server (alternative to uvicorn)
+# - prometheus-client: Metrics for monitoring
+# - sentry-sdk: Error tracking
+# - python-json-logger: Structured logging

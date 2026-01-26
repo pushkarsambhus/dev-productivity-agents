@@ -1,0 +1,55 @@
+# ==============================================================================
+# KUBERNETES NAMESPACE
+# ==============================================================================
+#
+# WHAT IS A NAMESPACE?
+# Namespaces are virtual clusters within a physical Kubernetes cluster
+# - Organize resources (dev, staging, prod)
+# - Isolate teams or projects
+# - Apply resource quotas and policies
+# - Avoid name conflicts
+#
+# ANALOGY: Like folders on your computer - organize and separate things
+#
+# DEFAULT NAMESPACES:
+# - default: Resources created without specifying namespace
+# - kube-system: Kubernetes system components
+# - kube-public: Public resources accessible to all
+# - kube-node-lease: Node heartbeat data
+#
+# INTERVIEW TIP: In AWS EKS or multi-tenant clusters:
+# - Each team/app gets its own namespace
+# - Apply NetworkPolicies to control traffic between namespaces
+# - Set ResourceQuotas to limit resource usage
+#
+# ==============================================================================
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: interview-prep
+  labels:
+    name: interview-prep
+    environment: development
+
+# ==============================================================================
+# USAGE
+# ==============================================================================
+#
+# Create namespace:
+#   kubectl apply -f k8s/namespace.yaml
+#
+# List namespaces:
+#   kubectl get namespaces
+#   (or: kubectl get ns)
+#
+# Delete namespace (and all resources in it):
+#   kubectl delete namespace interview-prep
+#
+# Set default namespace for kubectl commands:
+#   kubectl config set-context --current --namespace=interview-prep
+#
+# View resources in namespace:
+#   kubectl get all -n interview-prep
+#
+# ==============================================================================
