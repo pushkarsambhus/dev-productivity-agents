@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Single Agent Architecture</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: #0f1117;
+    color: #e2e8f0;
+    min-height: 100vh;
+  }
+
+  header {
+    background: linear-gradient(135deg, #1a1f2e 0%, #0f1117 100%);
+    border-bottom: 1px solid #2d3748;
+    padding: 24px 40px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  header h1 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #a78bfa;
+  }
+
+  header .badge {
+    background: #7c3aed22;
+    color: #a78bfa;
+    border: 1px solid #7c3aed55;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .main-layout {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    min-height: calc(100vh - 80px);
+  }
+
+  /* ── Diagram Canvas ── */
+  .canvas-area {
+    padding: 40px;
+    overflow-x: auto;
+  }
+
+  svg {
+    display: block;
+    margin: 0 auto;
+  }
+
+  /* ── Info Panel ── */
+  .info-panel {
+    background: #1a1f2e;
+    border-left: 1px solid #2d3748;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .panel-tabs {
+    display: flex;
+    border-bottom: 1px solid #2d3748;
+  }
+
+  .panel-tab {
+    flex: 1;
+    padding: 14px;
+    text-align: center;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #718096;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+
+  .panel-tab.active {
+    color: #a78bfa;
+    border-bottom-color: #a78bfa;
+  }
+
+  .panel-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+  }
+
+  .tab-pane { display: none; }
+  .tab-pane.active { display: block; }
+
+  /* ── Node info card ── */
+  .node-info-card {
+    background: #0f1117;
+    border: 1px solid #2d3748;
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+
+  .node-info-card h3 {
+    color: #a78bfa;
+    font-size: 0.95rem;
+    margin-bottom: 8px;
+  }
+
+  .node-info-card p {
+    color: #a0aec0;
+    font-size: 0.82rem;
+    line-height: 1.6;
+  }
+
+  /* ── Step list ── */
+  .step {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+    cursor: pointer;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    transition: all 0.2s;
+  }
+
+  .step:hover {
+    background: #0f1117;
+    border-color: #2d3748;
+  }
+
+  .step.active {
+    background: #0f1117;
+    border-color: #7c3aed55;
+  }
+
+  .step-num {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    flex-shrink: 0;
+    background: #7c3aed22;
+    color: #a78bfa;
+    border: 1px solid #7c3aed55;
+  }
+
+  .step-body h4 {
+    color: #e2e8f0;
+    font-size: 0.85rem;
+    margin-bottom: 4px;
+  }
+
+  .step-body p {
+    color: #718096;
+    font-size: 0.78rem;
+    line-height: 1.5;
+  }
+
+  /* ── Legend ── */
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    font-size: 0.82rem;
+    color: #a0aec0;
+  }
+
+  .legend-swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+
+  /* ── Tradeoffs ── */
+  .tradeoff {
+    background: #0f1117;
+    border-left: 3px solid #f6ad55;
+    padding: 10px 14px;
+    border-radius: 0 8px 8px 0;
+    margin-bottom: 10px;
+  }
+
+  .tradeoff.pro { border-left-color: #68d391; }
+  .tradeoff.con { border-left-color: #fc8181; }
+
+  .tradeoff p {
+    color: #a0aec0;
+    font-size: 0.8rem;
+    line-height: 1.5;
+  }
+
+  .tradeoff strong {
+    color: #e2e8f0;
+    font-size: 0.8rem;
+  }
+
+  /* ── SVG nodes ── */
+  .node { cursor: pointer; }
+  .node:hover .node-bg { filter: brightness(1.3); }
+  .node.highlighted .node-bg { stroke-width: 3; }
+
+  .edge-path {
+    fill: none;
+    stroke: #4a5568;
+    stroke-width: 1.5;
+  }
+
+  .edge-animated {
+    stroke: #7c3aed;
+    stroke-dasharray: 6,4;
+    animation: dash 1.5s linear infinite;
+  }
+
+  .data-flow {
+    stroke: #a78bfa;
+    stroke-dasharray: 4, 4;
+  }
+
+  @keyframes dash {
+    to { stroke-dashoffset: -20; }
+  }
+
+  .tooltip {
+    position: fixed;
+    background: #1a1f2e;
+    border: 1px solid #4a5568;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 0.78rem;
+    color: #e2e8f0;
+    pointer-events: none;
+    max-width: 220px;
+    line-height: 1.5;
+    z-index: 100;
+    display: none;
+  }
+
+  .section-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #4a5568;
+    margin-bottom: 10px;
+    margin-top: 16px;
+  }
+
+  .highlight-btn {
+    background: #7c3aed22;
+    border: 1px solid #7c3aed55;
+    color: #a78bfa;
+    padding: 6px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.78rem;
+    font-weight: 600;
+    transition: all 0.2s;
+    margin-bottom: 8px;
+    display: block;
+    width: 100%;
+    text-align: left;
+  }
+
+  .highlight-btn:hover {
+    background: #7c3aed44;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Single Agent Architecture</h1>
+  <span class="badge">Project 1</span>
+  <span class="badge" style="color:#68d391;border-color:#68d39155;background:#68d39122;">Tool-Use Loop</span>
+</header>
+
+<div class="main-layout">
+  <!-- Diagram -->
+  <div class="canvas-area">
+    <svg id="diagram" width="740" height="580" viewBox="0 0 740 580"></svg>
+  </div>
+
+  <!-- Info Panel -->
+  <div class="info-panel">
+    <div class="panel-tabs">
+      <div class="panel-tab active" data-tab="steps">Steps</div>
+      <div class="panel-tab" data-tab="tradeoffs">Trade-offs</div>
+      <div class="panel-tab" data-tab="legend">Legend</div>
+    </div>
+
+    <div class="panel-content">
+      <!-- Steps Tab -->
+      <div class="tab-pane active" id="tab-steps">
+        <p class="section-label">How the loop works</p>
+        <p class="section-label">Click a step to highlight it</p>
+
+        <div class="step" data-highlight="user" onclick="highlightStep('user',this)">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <h4>User Input</h4>
+            <p>User types a question or task. It's added to the messages[] list as a "user" role message.</p>
+          </div>
+        </div>
+
+        <div class="step" data-highlight="api" onclick="highlightStep('api',this)">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <h4>API Call to Claude</h4>
+            <p>The full conversation history + tool schemas are sent to the Claude API. Claude reads the tools and decides whether to use any.</p>
+          </div>
+        </div>
+
+        <div class="step" data-highlight="decision" onclick="highlightStep('decision',this)">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <h4>Check stop_reason</h4>
+            <p>"end_turn" → Claude is done. Extract text and return.<br>"tool_use" → Claude wants to call a function. Execute it.</p>
+          </div>
+        </div>
+
+        <div class="step" data-highlight="tools" onclick="highlightStep('tools',this)">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <h4>Execute Tools</h4>
+            <p>Your code (not Claude) calls the actual functions: web_search, calculator, etc. Results are collected.</p>
+          </div>
+        </div>
+
+        <div class="step" data-highlight="result" onclick="highlightStep('result',this)">
+          <div class="step-num">5</div>
+          <div class="step-body">
+            <h4>Return Results to Claude</h4>
+            <p>Tool results are appended to messages[] as a "user" message with type "tool_result". The loop repeats from step 2.</p>
+          </div>
+        </div>
+
+        <div class="step" data-highlight="output" onclick="highlightStep('output',this)">
+          <div class="step-num">6</div>
+          <div class="step-body">
+            <h4>Final Answer</h4>
+            <p>When stop_reason == "end_turn", Claude's text response is returned to the user.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Trade-offs Tab -->
+      <div class="tab-pane" id="tab-tradeoffs">
+        <p class="section-label">Design Decisions</p>
+
+        <div class="tradeoff pro">
+          <strong>Simple loop = easy to understand</strong>
+          <p>A while-loop is the minimum viable agent. Every agent framework is built on this.</p>
+        </div>
+
+        <div class="tradeoff con">
+          <strong>Full history on every call = growing cost</strong>
+          <p>Every API call sends the entire conversation. Long chats cost more. Mitigation: summarize old turns.</p>
+        </div>
+
+        <div class="tradeoff con">
+          <strong>MAX_TURNS prevents infinite loops</strong>
+          <p>Without a turn limit, a buggy tool or unclear instruction can loop forever burning tokens.</p>
+        </div>
+
+        <div class="tradeoff pro">
+          <strong>Stateless API = you control persistence</strong>
+          <p>The API doesn't remember your conversation. You own the history — store it in a DB for persistence.</p>
+        </div>
+
+        <div class="tradeoff">
+          <strong>Tool count vs. prompt size</strong>
+          <p>More tools = more capable agent but larger system prompt = higher token cost + potential confusion.</p>
+        </div>
+
+        <div class="tradeoff pro">
+          <strong>String results are flexible</strong>
+          <p>Tools return plain strings. Claude interprets them. No need for structured serialization.</p>
+        </div>
+      </div>
+
+      <!-- Legend Tab -->
+      <div class="tab-pane" id="tab-legend">
+        <p class="section-label">Node Types</p>
+
+        <div class="legend-item">
+          <div class="legend-swatch" style="background:#7c3aed;"></div>
+          <span>Claude API (external service)</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-swatch" style="background:#2563eb;"></div>
+          <span>Your Code (Python)</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-swatch" style="background:#059669;"></div>
+          <span>Tools (handlers)</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-swatch" style="background:#d97706;"></div>
+          <span>External APIs / Data</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-swatch" style="background:#718096;border-radius:50%;"></div>
+          <span>User / Output</span>
+        </div>
+
+        <p class="section-label" style="margin-top:20px;">Edge Types</p>
+        <div class="legend-item">
+          <svg width="40" height="16"><line x1="0" y1="8" x2="40" y2="8" stroke="#4a5568" stroke-width="2" marker-end="url(#arr)"/></svg>
+          <span>Control flow</span>
+        </div>
+        <div class="legend-item">
+          <svg width="40" height="16"><line x1="0" y1="8" x2="40" y2="8" stroke="#7c3aed" stroke-width="2" stroke-dasharray="5,3"/></svg>
+          <span>Animated: active data flow</span>
+        </div>
+
+        <p class="section-label" style="margin-top:20px;">Key Files</p>
+        <div style="font-size:0.8rem;color:#718096;line-height:2;">
+          <div><code style="color:#a78bfa;">agent.py</code> — the loop</div>
+          <div><code style="color:#a78bfa;">tools.py</code> — handlers + schemas</div>
+          <div><code style="color:#a78bfa;">config.py</code> — model, limits</div>
+          <div><code style="color:#a78bfa;">tests/</code> — unit + integration</div>
+          <div><code style="color:#a78bfa;">evals/</code> — quality checks</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+// ─── Data ──────────────────────────────────────────────────────────────────
+
+const nodes = [
+  // User
+  { id:'user',     x:80,  y:290, w:120, h:48, rx:24, color:'#374151', stroke:'#6b7280', label:'User', sub:'question / task', group:'user' },
+
+  // Agent core
+  { id:'msgs',     x:250, y:130, w:140, h:48, rx:8,  color:'#1e3a5f', stroke:'#2563eb', label:'messages[ ]', sub:'conversation history', group:'code' },
+  { id:'api',      x:250, y:230, w:140, h:54, rx:8,  color:'#3b1f6b', stroke:'#7c3aed', label:'Claude API', sub:'POST /v1/messages', group:'api' },
+  { id:'decision', x:250, y:340, w:140, h:54, rx:8,  color:'#1e3a5f', stroke:'#2563eb', label:'stop_reason?', sub:'end_turn | tool_use', group:'code' },
+  { id:'extract',  x:490, y:450, w:140, h:48, rx:8,  color:'#1e3a5f', stroke:'#2563eb', label:'Extract text', sub:'_extract_text()', group:'code' },
+  { id:'output',   x:620, y:290, w:100, h:48, rx:24, color:'#374151', stroke:'#6b7280', label:'Answer', sub:'to user', group:'output' },
+
+  // Tools
+  { id:'dispatch', x:490, y:250, w:140, h:48, rx:8,  color:'#064e3b', stroke:'#059669', label:'dispatch_tool()', sub:'tools.py', group:'tools' },
+  { id:'wsearch',  x:620, y:130, w:100, h:44, rx:6,  color:'#78350f', stroke:'#d97706', label:'web_search', sub:'→ SERP API', group:'ext' },
+  { id:'calc',     x:620, y:185, w:100, h:44, rx:6,  color:'#064e3b', stroke:'#059669', label:'calculator', sub:'local Python', group:'tools' },
+  { id:'time',     x:620, y:240, w:100, h:44, rx:6,  color:'#064e3b', stroke:'#059669', label:'get_time', sub:'local Python', group:'tools' },
+  { id:'fetch',    x:620, y:295, w:100, h:44, rx:6,  color:'#78350f', stroke:'#d97706', label:'fetch_url', sub:'HTTP request', group:'ext' },
+
+  // Loop back
+  { id:'toolresult', x:490, y:360, w:140, h:44, rx:8, color:'#1e3a5f', stroke:'#2563eb', label:'tool_result msg', sub:'appended to history', group:'code' },
+];
+
+const edges = [
+  { from:'user',     to:'msgs',      label:'append',         anim:false },
+  { from:'msgs',     to:'api',       label:'send history',   anim:true  },
+  { from:'api',      to:'decision',  label:'response',       anim:false },
+  { from:'decision', to:'extract',   label:'end_turn',       anim:false },
+  { from:'extract',  to:'output',    label:'return text',    anim:false },
+  { from:'decision', to:'dispatch',  label:'tool_use',       anim:true  },
+  { from:'dispatch', to:'wsearch',   label:'',               anim:false },
+  { from:'dispatch', to:'calc',      label:'',               anim:false },
+  { from:'dispatch', to:'time',      label:'',               anim:false },
+  { from:'dispatch', to:'fetch',     label:'',               anim:false },
+  { from:'dispatch', to:'toolresult',label:'result string',  anim:false },
+  { from:'toolresult',to:'msgs',     label:'loop back',      anim:true  },
+];
+
+// ─── Build SVG ─────────────────────────────────────────────────────────────
+
+const svg = document.getElementById('diagram');
+const NS = 'http://www.w3.org/2000/svg';
+
+function el(tag, attrs, text) {
+  const e = document.createElementNS(NS, tag);
+  for (const [k,v] of Object.entries(attrs || {})) e.setAttribute(k,v);
+  if (text) e.textContent = text;
+  return e;
+}
+
+// Defs
+const defs = el('defs');
+const marker = (id, color) => {
+  const m = el('marker',{id, markerWidth:'8', markerHeight:'8', refX:'6', refY:'3', orient:'auto'});
+  m.appendChild(el('path',{d:'M0,0 L0,6 L8,3 z', fill:color}));
+  return m;
+};
+defs.appendChild(marker('arr',     '#4a5568'));
+defs.appendChild(marker('arr-anim','#7c3aed'));
+svg.appendChild(defs);
+
+// Build node map
+const nodeMap = {};
+nodes.forEach(n => { nodeMap[n.id] = n; });
+
+function nodeCenter(n) {
+  return { x: n.x + n.w/2, y: n.y + n.h/2 };
+}
+
+function edgePath(from, to) {
+  const f = nodeCenter(nodeMap[from]);
+  const t = nodeCenter(nodeMap[to]);
+  const dx = t.x - f.x;
+  const dy = t.y - f.y;
+  const mx = f.x + dx * 0.5;
+  const my = f.y + dy * 0.5;
+  // Simple curved path
+  return `M${f.x},${f.y} Q${mx + dy*0.15},${my - dx*0.15} ${t.x},${t.y}`;
+}
+
+// Draw edges
+const edgeG = el('g');
+edges.forEach(e => {
+  const path = el('path', {
+    d: edgePath(e.from, e.to),
+    class: e.anim ? 'edge-path edge-animated' : 'edge-path',
+    'marker-end': e.anim ? 'url(#arr-anim)' : 'url(#arr)',
+    'stroke-width': e.anim ? '2' : '1.5',
+  });
+  edgeG.appendChild(path);
+
+  if (e.label) {
+    const fn = nodeCenter(nodeMap[e.from]);
+    const tn = nodeCenter(nodeMap[e.to]);
+    const lx = (fn.x + tn.x) / 2;
+    const ly = (fn.y + tn.y) / 2 - 8;
+    const t = el('text', { x:lx, y:ly, 'text-anchor':'middle', fill:'#4a5568',
+                            'font-size':'10', 'font-family':'monospace' }, e.label);
+    edgeG.appendChild(t);
+  }
+});
+svg.appendChild(edgeG);
+
+// Draw nodes
+const nodeG = el('g');
+nodes.forEach(n => {
+  const g = el('g', { class:'node', id:'node-' + n.id });
+
+  const rect = el('rect', {
+    class: 'node-bg',
+    x: n.x, y: n.y, width: n.w, height: n.h, rx: n.rx,
+    fill: n.color, stroke: n.stroke, 'stroke-width': '1.5',
+  });
+  g.appendChild(rect);
+
+  const label = el('text', {
+    x: n.x + n.w/2, y: n.y + (n.sub ? 18 : n.h/2 + 5),
+    'text-anchor': 'middle', fill: '#e2e8f0',
+    'font-size': '12', 'font-weight': '600', 'font-family': 'monospace',
+  }, n.label);
+  g.appendChild(label);
+
+  if (n.sub) {
+    const sub = el('text', {
+      x: n.x + n.w/2, y: n.y + 32,
+      'text-anchor': 'middle', fill: '#718096',
+      'font-size': '9.5', 'font-family': 'monospace',
+    }, n.sub);
+    g.appendChild(sub);
+  }
+
+  // Tooltip
+  g.addEventListener('mouseenter', ev => {
+    showTooltip(ev, n);
+    g.querySelector('.node-bg').setAttribute('filter', 'brightness(1.3)');
+  });
+  g.addEventListener('mouseleave', () => {
+    hideTooltip();
+    g.querySelector('.node-bg').setAttribute('filter', '');
+  });
+  g.addEventListener('mousemove', moveTooltip);
+
+  nodeG.appendChild(g);
+});
+svg.appendChild(nodeG);
+
+// Loop annotation
+const loopRect = el('rect', { x:215, y:100, width:210, height:320, rx:12,
+  fill:'none', stroke:'#2d3748', 'stroke-width':'1', 'stroke-dasharray':'6,4' });
+svg.insertBefore(loopRect, nodeG);
+const loopLabel = el('text', { x:225, y:95, fill:'#4a5568', 'font-size':'10',
+  'font-family':'monospace' }, '— agentic loop (agent.py) —');
+svg.insertBefore(loopLabel, nodeG);
+
+// ─── Tooltip ───────────────────────────────────────────────────────────────
+
+const tooltipEl = document.getElementById('tooltip');
+const tooltipData = {
+  user:       'The human. Provides an initial question. Can chat in a multi-turn session.',
+  msgs:       'messages[] — the full conversation history sent with every API call. Grows as the conversation progresses.',
+  api:        'The Claude API (POST /v1/messages). Receives history + tools. Returns a response with stop_reason.',
+  decision:   'Your code checks response.stop_reason:\n• "end_turn" → done\n• "tool_use" → execute tools',
+  extract:    '_extract_text() in agent.py — pulls the text block out of the response content array.',
+  output:     'The final natural-language answer returned to the user.',
+  dispatch:   'dispatch_tool() in tools.py — routes tool name → handler function. Runs the actual function.',
+  wsearch:    'Calls a real search API (Serper/SerpAPI). Requires SEARCH_API_KEY in config.py.',
+  calc:       'Pure Python math evaluation. No API needed. Uses eval() with restricted namespace for safety.',
+  time:       'Returns current UTC time using datetime.utcnow(). No API needed.',
+  fetch:      'HTTP GET with urllib. Strips HTML to plain text. Needs an internet connection.',
+  toolresult: 'Tool results are packaged as {"type":"tool_result","tool_use_id":"...","content":"..."} and appended to messages[].',
+};
+
+function showTooltip(ev, n) {
+  tooltipEl.textContent = tooltipData[n.id] || n.label;
+  tooltipEl.style.display = 'block';
+  moveTooltip(ev);
+}
+function moveTooltip(ev) {
+  tooltipEl.style.left = (ev.clientX + 14) + 'px';
+  tooltipEl.style.top  = (ev.clientY - 10) + 'px';
+}
+function hideTooltip() { tooltipEl.style.display = 'none'; }
+
+// ─── Tabs ──────────────────────────────────────────────────────────────────
+
+document.querySelectorAll('.panel-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+  });
+});
+
+// ─── Highlight Steps ───────────────────────────────────────────────────────
+
+const highlightMap = {
+  user:     ['user'],
+  api:      ['msgs','api'],
+  decision: ['decision'],
+  tools:    ['dispatch','wsearch','calc','time','fetch'],
+  result:   ['toolresult','msgs'],
+  output:   ['extract','output'],
+};
+
+let activeStepEl = null;
+
+function highlightStep(key, stepEl) {
+  // Deselect previous
+  if (activeStepEl) activeStepEl.classList.remove('active');
+  activeStepEl = stepEl;
+  stepEl.classList.add('active');
+
+  // Reset all nodes
+  nodes.forEach(n => {
+    const g = document.getElementById('node-' + n.id);
+    if (!g) return;
+    const rect = g.querySelector('.node-bg');
+    rect.setAttribute('stroke-width','1.5');
+    rect.setAttribute('filter','');
+  });
+
+  // Highlight selected
+  const ids = highlightMap[key] || [];
+  ids.forEach(id => {
+    const g = document.getElementById('node-' + id);
+    if (!g) return;
+    const rect = g.querySelector('.node-bg');
+    rect.setAttribute('stroke-width','3');
+    rect.setAttribute('filter','brightness(1.5)');
+  });
+}
+</script>
+</body>
+</html>

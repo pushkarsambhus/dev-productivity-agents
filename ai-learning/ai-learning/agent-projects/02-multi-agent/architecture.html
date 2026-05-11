@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Multi-Agent Workflow Architecture</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: #0b0f1a;
+    color: #e2e8f0;
+    min-height: 100vh;
+  }
+
+  header {
+    background: linear-gradient(135deg, #111827 0%, #0b0f1a 100%);
+    border-bottom: 1px solid #1f2937;
+    padding: 20px 36px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+
+  header h1 { font-size: 1.45rem; font-weight: 700; color: #34d399; }
+
+  .badge {
+    padding: 3px 11px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .badge-green  { background:#05966922; color:#34d399; border:1px solid #05966955; }
+  .badge-purple { background:#7c3aed22; color:#a78bfa; border:1px solid #7c3aed55; }
+  .badge-blue   { background:#1d4ed822; color:#60a5fa; border:1px solid #1d4ed855; }
+
+  /* ── layout ── */
+  .page { display: grid; grid-template-columns: 1fr 340px; height: calc(100vh - 68px); }
+
+  .canvas-wrap { overflow: auto; padding: 32px; display: flex; align-items: flex-start; justify-content: center; }
+
+  svg { display: block; }
+
+  /* ── side panel ── */
+  .panel { background: #111827; border-left: 1px solid #1f2937; display: flex; flex-direction: column; overflow: hidden; }
+
+  .tabs { display: flex; border-bottom: 1px solid #1f2937; flex-shrink: 0; }
+  .tab {
+    flex: 1; padding: 13px 6px; text-align: center; cursor: pointer;
+    font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+    color: #4b5563; border-bottom: 2px solid transparent; transition: all .2s;
+  }
+  .tab.active { color: #34d399; border-bottom-color: #34d399; }
+
+  .panel-body { flex: 1; overflow-y: auto; padding: 18px; }
+  .pane { display: none; }
+  .pane.active { display: block; }
+
+  /* ── section label ── */
+  .slabel {
+    font-size: 0.66rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+    color: #374151; margin: 16px 0 8px;
+  }
+  .slabel:first-child { margin-top: 0; }
+
+  /* ── agent cards ── */
+  .agent-card {
+    background: #0b0f1a; border: 1px solid #1f2937; border-radius: 10px;
+    padding: 13px; margin-bottom: 10px; cursor: pointer; transition: all .2s;
+  }
+  .agent-card:hover { border-color: #374151; }
+  .agent-card.active { border-color: #059669; }
+  .agent-card h3 { font-size: 0.85rem; margin-bottom: 5px; }
+  .agent-card p  { font-size: 0.77rem; color: #6b7280; line-height: 1.55; }
+  .agent-card .pill {
+    display: inline-block; padding: 2px 8px; border-radius: 10px;
+    font-size: 0.65rem; font-weight: 700; margin-bottom: 6px;
+  }
+
+  /* ── flow steps ── */
+  .flow-step { display: flex; gap: 10px; margin-bottom: 14px; cursor: pointer; padding: 8px; border-radius: 8px; border: 1px solid transparent; transition: all .2s; }
+  .flow-step:hover { background: #0b0f1a; border-color: #1f2937; }
+  .flow-step.active { background: #0b0f1a; border-color: #05966955; }
+  .flow-num {
+    width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.7rem; font-weight: 800; background: #05966922; color: #34d399; border: 1px solid #05966955;
+  }
+  .flow-body h4 { font-size: 0.82rem; color: #e2e8f0; margin-bottom: 3px; }
+  .flow-body p  { font-size: 0.76rem; color: #6b7280; line-height: 1.5; }
+
+  /* ── tradeoff cards ── */
+  .tradeoff { padding: 9px 13px; border-radius: 0 8px 8px 0; margin-bottom: 9px; }
+  .tradeoff p      { font-size: 0.77rem; color: #9ca3af; line-height: 1.5; }
+  .tradeoff strong { font-size: 0.77rem; color: #e2e8f0; }
+  .t-green  { background: #0b0f1a; border-left: 3px solid #34d399; }
+  .t-red    { background: #0b0f1a; border-left: 3px solid #f87171; }
+  .t-yellow { background: #0b0f1a; border-left: 3px solid #fbbf24; }
+
+  /* ── compare table ── */
+  .compare-table { width: 100%; border-collapse: collapse; font-size: 0.76rem; }
+  .compare-table th { color: #4b5563; font-weight: 700; text-align: left; padding: 6px 8px; border-bottom: 1px solid #1f2937; }
+  .compare-table td { padding: 7px 8px; border-bottom: 1px solid #111827; color: #9ca3af; vertical-align: top; }
+  .compare-table tr:last-child td { border-bottom: none; }
+  .compare-table td:first-child { color: #e2e8f0; font-weight: 600; white-space: nowrap; }
+
+  /* ── SVG styles ── */
+  .node-rect   { transition: filter .15s; cursor: pointer; }
+  .node-rect:hover { filter: brightness(1.35); }
+
+  .edge { fill: none; stroke-width: 1.5; }
+  .edge-ctrl { stroke: #1f2937; }
+  .edge-data { stroke: #065f46; stroke-dasharray: 5,3; }
+  .edge-anim { stroke: #059669; stroke-dasharray: 6,4; animation: flowdash 1.4s linear infinite; }
+  .edge-loop { stroke: #7c3aed; stroke-dasharray: 5,3; animation: flowdash 2s linear infinite; }
+
+  @keyframes flowdash { to { stroke-dashoffset: -20; } }
+
+  .tooltip {
+    position: fixed; background: #1f2937; border: 1px solid #374151;
+    border-radius: 8px; padding: 9px 13px; font-size: 0.75rem; color: #e2e8f0;
+    pointer-events: none; max-width: 230px; line-height: 1.55; z-index: 999; display: none;
+  }
+  .tooltip strong { display: block; color: #34d399; margin-bottom: 4px; font-size: 0.78rem; }
+
+  .mode-toggle {
+    display: flex; gap: 8px; margin-bottom: 14px;
+  }
+  .mode-btn {
+    flex: 1; padding: 8px 10px; border-radius: 7px; cursor: pointer; font-size: 0.75rem;
+    font-weight: 700; text-align: center; border: 1px solid #1f2937; transition: all .2s;
+    background: #0b0f1a; color: #4b5563;
+  }
+  .mode-btn.active { background: #05966922; color: #34d399; border-color: #05966955; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Multi-Agent Workflow</h1>
+  <span class="badge badge-green">Project 2</span>
+  <span class="badge badge-purple">3 Agents</span>
+  <span class="badge badge-blue">Reflection Pattern</span>
+</header>
+
+<div class="page">
+  <!-- ── Diagram ── -->
+  <div class="canvas-wrap">
+    <svg id="svg" width="760" height="640" viewBox="0 0 760 640"></svg>
+  </div>
+
+  <!-- ── Panel ── -->
+  <div class="panel">
+    <div class="tabs">
+      <div class="tab active" data-tab="flow">Flow</div>
+      <div class="tab" data-tab="agents">Agents</div>
+      <div class="tab" data-tab="patterns">Patterns</div>
+      <div class="tab" data-tab="tradeoffs">Trade-offs</div>
+    </div>
+
+    <div class="panel-body">
+
+      <!-- FLOW TAB -->
+      <div class="pane active" id="pane-flow">
+        <p class="slabel">Pipeline execution order</p>
+
+        <div class="mode-toggle">
+          <div class="mode-btn active" id="btn-pipeline" onclick="setMode('pipeline')">Hardcoded Pipeline</div>
+          <div class="mode-btn" id="btn-dynamic" onclick="setMode('dynamic')">Dynamic Orchestrator</div>
+        </div>
+
+        <div id="pipeline-steps">
+          <div class="flow-step" onclick="highlight(['user','orchestrator'],this)">
+            <div class="flow-num">1</div>
+            <div class="flow-body">
+              <h4>User Request</h4>
+              <p>User sends a request to <code>run_pipeline()</code> in orchestrator.py.</p>
+            </div>
+          </div>
+          <div class="flow-step" onclick="highlight(['orchestrator','researcher'],this)">
+            <div class="flow-num">2</div>
+            <div class="flow-body">
+              <h4>Research Phase</h4>
+              <p>Orchestrator calls <code>run_researcher()</code>. Researcher uses web_search + fetch_url tools in its own loop.</p>
+            </div>
+          </div>
+          <div class="flow-step" onclick="highlight(['researcher','orchestrator'],this)">
+            <div class="flow-num">3</div>
+            <div class="flow-body">
+              <h4>Research Brief Returned</h4>
+              <p>Researcher returns a structured brief of facts + sources back to the orchestrator.</p>
+            </div>
+          </div>
+          <div class="flow-step" onclick="highlight(['orchestrator','writer'],this)">
+            <div class="flow-num">4</div>
+            <div class="flow-body">
+              <h4>Write Phase</h4>
+              <p>Orchestrator calls <code>run_writer()</code> with the request + research brief. Writer produces a first draft (no tools).</p>
+            </div>
+          </div>
+          <div class="flow-step" onclick="highlight(['writer','critic'],this)">
+            <div class="flow-num">5</div>
+            <div class="flow-body">
+              <h4>Critique Phase</h4>
+              <p>Orchestrator calls <code>run_critic()</code> with the draft. Critic returns APPROVE or REVISE + specific feedback.</p>
+            </div>
+          </div>
+          <div class="flow-step" onclick="highlight(['critic','writer','orchestrator'],this)">
+            <div class="flow-num">6</div>
+            <div class="flow-body">
+              <h4>Revision Loop (optional)</h4>
+              <p>If REVISE → Writer gets critic feedback and produces a new draft. Repeat up to MAX_REVISION_ROUNDS.</p>
+            </div>
+          </div>
+          <div class="flow-step" onclick="highlight(['orchestrator','user'],this)">
+            <div class="flow-num">7</div>
+            <div class="flow-body">
+              <h4>Final Output</h4>
+              <p>Approved draft (or best draft after max revisions) is returned to the user via <code>state.final_output</code>.</p>
+            </div>
+          </div>
+        </div>
+
+        <div id="dynamic-steps" style="display:none">
+          <div class="flow-step" onclick="highlight(['user','orchestrator'],this)">
+            <div class="flow-num">1</div>
+            <div class="flow-body">
+              <h4>User Request → Orchestrator</h4>
+              <p>Claude (orchestrator) receives the user request and tool schemas for all 3 agents.</p>
+            </div>
+          </div>
+          <div class="flow-step" onclick="highlight(['orchestrator'],this)">
+            <div class="flow-num">2</div>
+            <div class="flow-body">
+              <h4>Claude Decides What to Call</h4>
+              <p>Claude reasons about the task and emits tool_use blocks to call agents — <em>it decides the order</em>.</p>
+            </div>
+          </div>
+          <div class="flow-step" onclick="highlight(['orchestrator','researcher','writer','critic'],this)">
+            <div class="flow-num">3</div>
+            <div class="flow-body">
+              <h4>Agent Tool Calls Dispatched</h4>
+              <p><code>_handle_orchestrator_tool()</code> intercepts each call and invokes the real agent function.</p>
+            </div>
+          </div>
+          <div class="flow-step" onclick="highlight(['orchestrator'],this)">
+            <div class="flow-num">4</div>
+            <div class="flow-body">
+              <h4>Results Fed Back</h4>
+              <p>Each agent's output is returned as a tool_result. Claude sees it and decides the next step.</p>
+            </div>
+          </div>
+          <div class="flow-step" onclick="highlight(['orchestrator','user'],this)">
+            <div class="flow-num">5</div>
+            <div class="flow-body">
+              <h4>finalize() Called</h4>
+              <p>When Claude is satisfied, it calls the <code>finalize</code> tool, which stores the document and ends the loop.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AGENTS TAB -->
+      <div class="pane" id="pane-agents">
+        <p class="slabel">Click an agent to highlight it</p>
+
+        <div class="agent-card" onclick="highlight(['orchestrator'],this)">
+          <span class="pill" style="background:#05966922;color:#34d399;border:1px solid #05966955;">orchestrator.py</span>
+          <h3 style="color:#34d399;">Orchestrator</h3>
+          <p>Coordinates the pipeline. In hardcoded mode it calls agents in a fixed order. In dynamic mode it IS a Claude agent that uses other agents as tools. Owns the PipelineState object.</p>
+        </div>
+
+        <div class="agent-card" onclick="highlight(['researcher'],this)">
+          <span class="pill" style="background:#1d4ed822;color:#60a5fa;border:1px solid #1d4ed855;">agents/researcher.py</span>
+          <h3 style="color:#60a5fa;">Researcher</h3>
+          <p>Has its own tool-use loop with web_search and fetch_url. Returns a structured research brief. Uses RESEARCHER_MODEL from config.py (can be a cheaper model).</p>
+        </div>
+
+        <div class="agent-card" onclick="highlight(['writer'],this)">
+          <span class="pill" style="background:#78350f22;color:#fbbf24;border:1px solid #78350f55;">agents/writer.py</span>
+          <h3 style="color:#fbbf24;">Writer</h3>
+          <p>No tools — pure text transformation. Takes the research brief and user request and writes a draft. One API call, no loop needed.</p>
+        </div>
+
+        <div class="agent-card" onclick="highlight(['critic'],this)">
+          <span class="pill" style="background:#7c3aed22;color:#a78bfa;border:1px solid #7c3aed55;">agents/critic.py</span>
+          <h3 style="color:#a78bfa;">Critic</h3>
+          <p>Reviews the draft against the research and user request. Returns APPROVE or REVISE + numbered specific feedback. Implements the Reflection pattern.</p>
+        </div>
+
+        <p class="slabel">Data flow between agents</p>
+        <div style="font-size:0.76rem;color:#6b7280;line-height:2;">
+          <div>Research brief: <code style="color:#60a5fa;">researcher → orchestrator → writer</code></div>
+          <div>Draft: <code style="color:#fbbf24;">writer → orchestrator → critic</code></div>
+          <div>Feedback: <code style="color:#a78bfa;">critic → orchestrator → writer</code></div>
+          <div>Final doc: <code style="color:#34d399;">writer → orchestrator → user</code></div>
+        </div>
+      </div>
+
+      <!-- PATTERNS TAB -->
+      <div class="pane" id="pane-patterns">
+        <p class="slabel">Orchestration Patterns Used</p>
+
+        <div class="tradeoff t-green" style="margin-bottom:12px;">
+          <strong>1. Hardcoded Pipeline</strong>
+          <p><code>run_pipeline()</code> in orchestrator.py. You control the exact execution order in Python code. Predictable, easy to test, easy to debug.</p>
+        </div>
+
+        <div class="tradeoff t-yellow" style="margin-bottom:12px;">
+          <strong>2. Dynamic Orchestration</strong>
+          <p><code>run_dynamic()</code>: Claude itself decides which agents to call via tool_use. More flexible but harder to predict and costs more tokens.</p>
+        </div>
+
+        <div class="tradeoff t-green" style="margin-bottom:12px;">
+          <strong>3. Reflection Pattern</strong>
+          <p>Generate → Critique → Revise loop. The Critic reviews the Writer's draft and the Writer improves it. Proven to raise output quality.</p>
+        </div>
+
+        <div class="tradeoff t-yellow" style="margin-bottom:12px;">
+          <strong>4. Parallel Fan-out</strong>
+          <p><code>run_parallel_research()</code>: Multiple researcher tasks run concurrently using ThreadPoolExecutor. Cuts wall-clock time when topics are independent.</p>
+        </div>
+
+        <p class="slabel">When to choose each</p>
+        <table class="compare-table">
+          <tr><th>Pattern</th><th>Use When</th></tr>
+          <tr><td>Pipeline</td><td>You know the exact steps in advance</td></tr>
+          <tr><td>Dynamic</td><td>Steps vary per request type</td></tr>
+          <tr><td>Reflection</td><td>Output quality matters more than speed/cost</td></tr>
+          <tr><td>Parallel</td><td>Sub-tasks are independent of each other</td></tr>
+        </table>
+      </div>
+
+      <!-- TRADEOFFS TAB -->
+      <div class="pane" id="pane-tradeoffs">
+        <p class="slabel">Architecture decisions</p>
+
+        <div class="tradeoff t-green">
+          <strong>Specialised agents = better focus</strong>
+          <p>Each agent has a narrow role and its own system prompt. Prevents "jack of all trades" confusion that hurts quality.</p>
+        </div>
+        <div class="tradeoff t-red">
+          <strong>More agents = more API cost</strong>
+          <p>3 agents × multiple turns each = 6–12 API calls per request. Use cheaper models for simpler agents (see config.py).</p>
+        </div>
+        <div class="tradeoff t-green">
+          <strong>Isolated histories = no cross-contamination</strong>
+          <p>Each agent has its own messages[]. The Writer doesn't see the Researcher's tool calls — only its final brief.</p>
+        </div>
+        <div class="tradeoff t-red">
+          <strong>Revision loops need a cap</strong>
+          <p>Without MAX_REVISION_ROUNDS the Critic could request revisions forever. Set a sensible limit (2–3).</p>
+        </div>
+        <div class="tradeoff t-yellow">
+          <strong>Dynamic orchestration is powerful but opaque</strong>
+          <p>When Claude decides the flow, it's harder to write deterministic tests. Hardcoded pipelines are easier to test.</p>
+        </div>
+        <div class="tradeoff t-green">
+          <strong>PipelineState = full audit trail</strong>
+          <p>Every step is logged with agent name, action, and output. Invaluable for debugging and evals.</p>
+        </div>
+        <div class="tradeoff t-yellow">
+          <strong>Context window grows with agents</strong>
+          <p>Research briefs passed between agents consume tokens. Keep briefs concise. Use MAX_TOKENS_PER_AGENT limits.</p>
+        </div>
+      </div>
+
+    </div><!-- panel-body -->
+  </div><!-- panel -->
+</div><!-- page -->
+
+<div class="tooltip" id="tt"></div>
+
+<script>
+// ─── Node definitions ──────────────────────────────────────────────────────
+const NODES = [
+  // User
+  { id:'user',        x:30,  y:295, w:110, h:46, rx:23, fill:'#1f2937', stroke:'#4b5563', label:'User',          sub:'request / answer' },
+
+  // Orchestrator (center)
+  { id:'orchestrator',x:270, y:280, w:150, h:56, rx:10, fill:'#064e3b', stroke:'#059669', label:'Orchestrator',  sub:'orchestrator.py' },
+
+  // Three agents
+  { id:'researcher',  x:270, y:100, w:150, h:54, rx:10, fill:'#1e3a5f', stroke:'#3b82f6', label:'Researcher',    sub:'agents/researcher.py' },
+  { id:'writer',      x:270, y:460, w:150, h:54, rx:10, fill:'#78350f', stroke:'#f59e0b', label:'Writer',        sub:'agents/writer.py' },
+  { id:'critic',      x:510, y:280, w:150, h:54, rx:10, fill:'#3b1f6b', stroke:'#8b5cf6', label:'Critic',        sub:'agents/critic.py' },
+
+  // Researcher tools
+  { id:'wsearch',     x:490, y:80,  w:120, h:40, rx:6,  fill:'#111827', stroke:'#374151', label:'web_search',    sub:'SERP API' },
+  { id:'furl',        x:490, y:132, w:120, h:40, rx:6,  fill:'#111827', stroke:'#374151', label:'fetch_url',     sub:'HTTP req' },
+
+  // Claude API nodes (shared)
+  { id:'claudeR',     x:490, y:420, w:120, h:40, rx:6,  fill:'#3b1f6b', stroke:'#7c3aed', label:'Claude API',    sub:'researcher call' },
+  { id:'claudeW',     x:490, y:470, w:120, h:40, rx:6,  fill:'#3b1f6b', stroke:'#7c3aed', label:'Claude API',    sub:'writer call' },
+  { id:'claudeC',     x:490, y:520, w:120, h:40, rx:6,  fill:'#3b1f6b', stroke:'#7c3aed', label:'Claude API',    sub:'critic call' },
+
+  // State
+  { id:'state',       x:270, y:390, w:150, h:46, rx:8,  fill:'#0b0f1a', stroke:'#374151', label:'PipelineState', sub:'audit log + results' },
+
+  // Output
+  { id:'output',      x:30,  y:390, w:110, h:46, rx:23, fill:'#1f2937', stroke:'#4b5563', label:'Final Output',  sub:'state.final_output' },
+
+  // Loop indicator
+  { id:'revloop',     x:270, y:200, w:150, h:36, rx:6,  fill:'#0b0f1a', stroke:'#7c3aed', label:'Revision Loop', sub:'up to MAX_REVISION_ROUNDS' },
+];
+
+const EDGES = [
+  { from:'user',         to:'orchestrator', cls:'edge-anim',  label:'' },
+  { from:'orchestrator', to:'researcher',   cls:'edge-anim',  label:'1. research' },
+  { from:'researcher',   to:'wsearch',      cls:'edge-ctrl',  label:'' },
+  { from:'researcher',   to:'furl',         cls:'edge-ctrl',  label:'' },
+  { from:'researcher',   to:'orchestrator', cls:'edge-data',  label:'brief' },
+  { from:'orchestrator', to:'writer',       cls:'edge-anim',  label:'2. write' },
+  { from:'writer',       to:'orchestrator', cls:'edge-data',  label:'draft' },
+  { from:'orchestrator', to:'critic',       cls:'edge-anim',  label:'3. critique' },
+  { from:'critic',       to:'orchestrator', cls:'edge-data',  label:'verdict' },
+  { from:'orchestrator', to:'revloop',      cls:'edge-loop',  label:'REVISE' },
+  { from:'revloop',      to:'writer',       cls:'edge-loop',  label:'' },
+  { from:'orchestrator', to:'state',        cls:'edge-ctrl',  label:'log steps' },
+  { from:'orchestrator', to:'output',       cls:'edge-anim',  label:'done' },
+  { from:'output',       to:'user',         cls:'edge-ctrl',  label:'' },
+];
+
+const TOOLTIP_TEXT = {
+  user:        { title:'User', body:'Sends a natural-language request. Receives state.final_output when the pipeline is done.' },
+  orchestrator:{ title:'Orchestrator', body:'The hub. In pipeline mode it calls agents in a fixed Python order. In dynamic mode it IS a Claude agent that uses other agents as tools.' },
+  researcher:  { title:'Researcher Agent', body:'Has its own agentic loop with web_search + fetch_url. Returns a research brief. Can use a cheaper model (RESEARCHER_MODEL in config.py).' },
+  writer:      { title:'Writer Agent', body:'No tools. Pure text generation. Receives the research brief + user request. Writes a draft in one API call.' },
+  critic:      { title:'Critic Agent', body:'Reviews the draft and returns APPROVE or REVISE + specific numbered feedback. Implements the Reflection pattern.' },
+  wsearch:     { title:'web_search tool', body:'Searches the internet via SERP API. Requires SEARCH_API_KEY in config.py. Returns titles, snippets, URLs.' },
+  furl:        { title:'fetch_url tool', body:'HTTP GET a specific URL and strip HTML to plain text. Used by the Researcher to read articles in depth.' },
+  claudeR:     { title:'Claude API (Researcher)', body:'Each agent has its own Claude API call. The Researcher uses RESEARCHER_MODEL — you can set this to a cheaper model.' },
+  claudeW:     { title:'Claude API (Writer)', body:'Writer uses WRITER_MODEL. Since writing needs quality, keep this at opus-4-6 unless cost is a concern.' },
+  claudeC:     { title:'Claude API (Critic)', body:'Critic uses CRITIC_MODEL. A capable model here reduces bad verdicts that waste revision rounds.' },
+  state:       { title:'PipelineState', body:'Dataclass that tracks everything: research_brief, all drafts, critic feedback, revision count, step audit log. Invaluable for debugging.' },
+  revloop:     { title:'Revision Loop', body:'If Critic says REVISE, orchestrator passes the feedback to the Writer and repeats. Capped at MAX_REVISION_ROUNDS in config.py.' },
+  output:      { title:'Final Output', body:'The approved draft (or best draft after max revisions). Stored in state.final_output and returned to the caller.' },
+};
+
+// ─── Build SVG ─────────────────────────────────────────────────────────────
+const NS  = 'http://www.w3.org/2000/svg';
+const svg = document.getElementById('svg');
+
+const mk = (tag, attrs, txt) => {
+  const e = document.createElementNS(NS, tag);
+  for (const [k,v] of Object.entries(attrs||{})) e.setAttribute(k,v);
+  if (txt !== undefined) e.textContent = txt;
+  return e;
+};
+
+// Arrow markers
+const defs = mk('defs');
+const mkMarker = (id, color) => {
+  const m = mk('marker',{id, markerWidth:'8', markerHeight:'8', refX:'7', refY:'3', orient:'auto'});
+  m.appendChild(mk('path',{d:'M0,0 L0,6 L8,3 z', fill:color}));
+  return m;
+};
+defs.appendChild(mkMarker('arr-ctrl','#374151'));
+defs.appendChild(mkMarker('arr-data','#065f46'));
+defs.appendChild(mkMarker('arr-anim','#059669'));
+defs.appendChild(mkMarker('arr-loop','#7c3aed'));
+svg.appendChild(defs);
+
+const nodeMap = {};
+NODES.forEach(n => { nodeMap[n.id] = n; });
+
+function center(n) { return { x: n.x + n.w/2, y: n.y + n.h/2 }; }
+
+function smoothEdge(fid, tid) {
+  const f = center(nodeMap[fid]);
+  const t = center(nodeMap[tid]);
+  const dx = t.x - f.x, dy = t.y - f.y;
+  const cx1 = f.x + dx*0.45 - dy*0.12;
+  const cy1 = f.y + dy*0.45 + dx*0.12;
+  return `M${f.x},${f.y} C${cx1},${cy1} ${cx1},${cy1} ${t.x},${t.y}`;
+}
+
+const markerMap = { 'edge-ctrl':'arr-ctrl', 'edge-data':'arr-data', 'edge-anim':'arr-anim', 'edge-loop':'arr-loop' };
+
+// Edges
+const edgeG = mk('g');
+EDGES.forEach(e => {
+  const path = mk('path',{
+    d: smoothEdge(e.from, e.to),
+    class: 'edge ' + e.cls,
+    'marker-end': `url(#${markerMap[e.cls]})`,
+    'stroke-width': e.cls === 'edge-anim' ? '2' : '1.5',
+  });
+  edgeG.appendChild(path);
+
+  if (e.label) {
+    const f = center(nodeMap[e.from]);
+    const t = center(nodeMap[e.to]);
+    const lx = (f.x + t.x)/2 + 4;
+    const ly = (f.y + t.y)/2 - 7;
+    edgeG.appendChild(mk('text',{
+      x:lx, y:ly, 'text-anchor':'middle', fill:'#374151',
+      'font-size':'9.5', 'font-family':'monospace'
+    }, e.label));
+  }
+});
+svg.appendChild(edgeG);
+
+// Pipeline grouping box
+const boxG = mk('g');
+const pipelineBox = mk('rect',{
+  x:240, y:70, width:210, height:490, rx:14,
+  fill:'none', stroke:'#1f2937', 'stroke-width':'1', 'stroke-dasharray':'7,5'
+});
+boxG.appendChild(pipelineBox);
+boxG.appendChild(mk('text',{x:252,y:66,fill:'#374151','font-size':'9.5','font-family':'monospace'},'── pipeline boundary ──'));
+svg.insertBefore(boxG, edgeG);
+
+// Nodes
+const nodeG = mk('g');
+NODES.forEach(n => {
+  const g = mk('g',{ id:'nd-'+n.id });
+
+  const rect = mk('rect',{
+    class:'node-rect', x:n.x, y:n.y, width:n.w, height:n.h, rx:n.rx,
+    fill:n.fill, stroke:n.stroke, 'stroke-width':'1.5',
+  });
+  g.appendChild(rect);
+
+  const lblY = n.sub ? n.y + (n.h<=40 ? 15 : 19) : n.y + n.h/2 + 5;
+  g.appendChild(mk('text',{
+    x:n.x+n.w/2, y:lblY, 'text-anchor':'middle',
+    fill:'#f3f4f6', 'font-size':'11.5', 'font-weight':'700', 'font-family':'monospace',
+  }, n.label));
+
+  if (n.sub) {
+    g.appendChild(mk('text',{
+      x:n.x+n.w/2, y:n.y+(n.h<=40?28:34), 'text-anchor':'middle',
+      fill:'#6b7280', 'font-size':'9', 'font-family':'monospace',
+    }, n.sub));
+  }
+
+  g.addEventListener('mouseenter', ev => { showTT(ev, n.id); });
+  g.addEventListener('mousemove',  ev => { moveTT(ev); });
+  g.addEventListener('mouseleave', ()  => { hideTT(); });
+
+  nodeG.appendChild(g);
+});
+svg.appendChild(nodeG);
+
+// ─── Tooltip ───────────────────────────────────────────────────────────────
+const tt = document.getElementById('tt');
+function showTT(ev, id) {
+  const d = TOOLTIP_TEXT[id];
+  if (!d) return;
+  tt.innerHTML = `<strong>${d.title}</strong>${d.body}`;
+  tt.style.display = 'block';
+  moveTT(ev);
+}
+function moveTT(ev) {
+  tt.style.left = (ev.clientX + 14) + 'px';
+  tt.style.top  = (ev.clientY - 10) + 'px';
+}
+function hideTT() { tt.style.display = 'none'; }
+
+// ─── Node highlighting ─────────────────────────────────────────────────────
+let _prevStep = null;
+
+function highlight(ids, stepEl) {
+  // Reset all
+  NODES.forEach(n => {
+    const r = document.querySelector(`#nd-${n.id} .node-rect`);
+    if (r) { r.setAttribute('stroke-width','1.5'); r.style.filter = ''; }
+  });
+
+  // Highlight selected
+  ids.forEach(id => {
+    const r = document.querySelector(`#nd-${id} .node-rect`);
+    if (r) { r.setAttribute('stroke-width','3'); r.style.filter = 'brightness(1.5)'; }
+  });
+
+  // Step active state
+  if (_prevStep) _prevStep.classList.remove('active');
+  if (stepEl) { stepEl.classList.add('active'); _prevStep = stepEl; }
+}
+
+// Agent cards also highlight
+document.querySelectorAll('.agent-card').forEach(card => {
+  card.addEventListener('click', function() {
+    document.querySelectorAll('.agent-card').forEach(c => c.classList.remove('active'));
+    this.classList.add('active');
+  });
+});
+
+// ─── Mode toggle ───────────────────────────────────────────────────────────
+function setMode(mode) {
+  document.getElementById('btn-pipeline').classList.toggle('active', mode==='pipeline');
+  document.getElementById('btn-dynamic').classList.toggle('active', mode==='dynamic');
+  document.getElementById('pipeline-steps').style.display = mode==='pipeline' ? 'block' : 'none';
+  document.getElementById('dynamic-steps').style.display  = mode==='dynamic'  ? 'block' : 'none';
+}
+
+// ─── Tabs ──────────────────────────────────────────────────────────────────
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('pane-' + tab.dataset.tab).classList.add('active');
+  });
+});
+</script>
+</body>
+</html>

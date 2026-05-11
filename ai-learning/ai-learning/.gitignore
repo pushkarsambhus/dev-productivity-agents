@@ -1,0 +1,14 @@
+# Database files — may contain API keys
+sessions.db
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# Env files
+.env
+.env.*

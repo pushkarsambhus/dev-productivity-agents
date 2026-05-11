@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Interview Prep Portal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+
+<!-- ═══ LANDING VIEW ══════════════════════════════════════════════════════════ -->
+<div id="view-landing" class="view">
+  <div class="landing-wrap">
+    <header class="landing-header">
+      <div class="brand"><span class="brand-icon">🎯</span> Interview Prep Portal</div>
+      <p class="tagline">AI-powered technical interview practice — tailored to your role</p>
+    </header>
+
+    <!-- ── Mode toggle ─────────────────────────────────────────────────── -->
+    <div class="mode-toggle-row">
+      <button class="mode-btn active" id="mode-btn-prep" data-mode="prep">Coding Interview Prep</button>
+      <button class="mode-btn" id="mode-btn-role" data-mode="role">Role-Based Interview</button>
+    </div>
+
+    <!-- ── PREP MODE ───────────────────────────────────────────────────── -->
+    <div id="prep-section">
+      <div class="prep-header">
+        <span class="prep-badge">8-Week Plan · AI Evaluated</span>
+        <p class="section-label" style="margin-bottom:4px">Select a topic to practice</p>
+        <p class="packs-hint" style="margin-bottom:12px">
+          Questions come from your curriculum. Evaluation, chat, and similar questions always use your Claude subscription. An API key is only needed if you want extra questions via Anthropic API or OpenAI.
+        </p>
+      </div>
+      <div class="prep-weeks" id="prep-weeks"></div>
+
+      <div class="config-card" id="prep-config-card" style="margin-top:20px">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Extra AI Questions</label>
+            <div class="btn-group" id="prep-num-btn-group">
+              <button class="count-btn active" data-n="0">Pack only</button>
+              <button class="count-btn" data-n="5">+5</button>
+              <button class="count-btn" data-n="10">+10</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>AI Provider</label>
+            <div class="btn-group" id="prep-provider-btn-group">
+              <button class="count-btn active" data-p="claude-cli">Claude (subscription)</button>
+              <button class="count-btn" data-p="anthropic">Anthropic API</button>
+              <button class="count-btn" data-p="openai">OpenAI</button>
+            </div>
+          </div>
+        </div>
+        <div class="form-group" id="prep-apikey-row" hidden>
+          <label>API Key</label>
+          <input id="prep-api-key" type="password" placeholder="sk-…" autocomplete="off" />
+        </div>
+        <button class="btn-primary btn-lg" id="btn-start-prep">Start Practice →</button>
+      </div>
+    </div>
+
+    <!-- ── ROLE MODE ───────────────────────────────────────────────────── -->
+    <div id="role-section" hidden>
+      <p class="section-label">Select your target role</p>
+      <div class="position-grid" id="position-grid"></div>
+
+      <div class="config-card">
+        <div class="form-row">
+          <div class="form-group" style="flex:1">
+            <label>Or type a custom role</label>
+            <input id="custom-position" type="text" placeholder="e.g. iOS Developer, Data Engineer…" />
+          </div>
+          <div class="form-group">
+            <label>Questions</label>
+            <div class="btn-group" id="num-btn-group">
+              <button class="count-btn" data-n="5">5</button>
+              <button class="count-btn active" data-n="10">10</button>
+              <button class="count-btn" data-n="15">15</button>
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Custom topics <span class="label-hint">(optional)</span></label>
+          <input id="custom-topics" type="text" placeholder="e.g. React hooks, SQL joins, async/await…" />
+        </div>
+        <div class="form-group">
+          <label>AI Provider</label>
+          <div class="btn-group" id="provider-btn-group">
+            <button class="count-btn active" data-p="claude-cli">Claude (subscription)</button>
+            <button class="count-btn" data-p="anthropic">Anthropic API</button>
+            <button class="count-btn" data-p="openai">OpenAI</button>
+          </div>
+        </div>
+        <div class="form-group" id="role-apikey-row" hidden>
+          <label>API Key</label>
+          <input id="api-key" type="password" placeholder="sk-…" autocomplete="off" />
+        </div>
+        <button class="btn-primary btn-lg" id="btn-start">Start Interview →</button>
+      </div>
+
+      <!-- Custom question packs -->
+      <div id="packs-section" hidden>
+        <p class="section-label" style="margin-top:28px">Other Custom Packs</p>
+        <p class="packs-hint">
+          Selected packs are <strong>added on top</strong> of the AI-generated questions.
+          Drop any <code>.py</code> file into <code>interview-portal/custom_questions/</code> to add your own.
+        </p>
+        <div class="packs-grid" id="packs-grid"></div>
+      </div>
+    </div>
+
+    <!-- Saved sessions -->
+    <div class="resume-card" id="saved-sessions-card" hidden>
+      <p class="section-label" style="margin-bottom:12px">Resume a Previous Session</p>
+      <div id="saved-sessions-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ LOADING VIEW ══════════════════════════════════════════════════════════ -->
+<div id="view-loading" class="view" hidden>
+  <div class="loading-wrap">
+    <div class="spinner-ring"></div>
+    <h2 class="loading-title">Generating Your Questions</h2>
+    <p class="loading-pos" id="loading-pos"></p>
+    <ul class="loading-steps" id="loading-steps">
+      <li class="step" id="ls-1">Analysing role requirements</li>
+      <li class="step" id="ls-2">Crafting MCQ questions</li>
+      <li class="step" id="ls-3">Building code challenges</li>
+      <li class="step" id="ls-4">Ordering by difficulty</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ═══ QUESTION VIEW ═════════════════════════════════════════════════════════ -->
+<div id="view-question" class="view" hidden>
+  <div class="q-layout">
+
+    <!-- Sidebar -->
+    <aside class="q-sidebar">
+      <div class="sb-brand">🎯 Interview Prep</div>
+      <div class="sb-position" id="sb-position">—</div>
+      <div class="session-id-box" id="session-id-box" title="Click to copy session ID">
+        <span class="session-id-label">Session ID</span>
+        <span class="session-id-val" id="session-id-val">—</span>
+        <span class="session-id-copy" id="session-id-copy">Copy</span>
+      </div>
+
+      <div class="score-card">
+        <div class="score-label">Score</div>
+        <div class="score-value" id="sb-score">0 / 0</div>
+        <div class="score-track"><div class="score-fill" id="score-fill"></div></div>
+      </div>
+
+      <nav class="q-nav" id="q-nav"></nav>
+
+      <button class="btn-ghost btn-sm" id="btn-new-session" style="margin-top:auto">↩ New Session</button>
+    </aside>
+
+    <!-- Main -->
+    <main class="q-main">
+      <div class="q-card" id="q-card">
+
+        <!-- Meta row -->
+        <div class="q-meta">
+          <div class="meta-left">
+            <span class="badge" id="q-type-badge">MCQ</span>
+            <span class="badge" id="q-diff-badge">Easy</span>
+          </div>
+          <div class="meta-right">
+            <span class="topic-tag" id="q-topic">—</span>
+            <span class="q-num" id="q-num">1 / 10</span>
+          </div>
+        </div>
+
+        <!-- Question text -->
+        <p class="q-text" id="q-text"></p>
+
+        <!-- Concept walkthrough -->
+        <div id="sec-concept" hidden>
+          <div class="concept-inline-body" id="concept-inline-body"></div>
+        </div>
+
+        <!-- MCQ options -->
+        <div id="sec-mcq" hidden>
+          <div class="options-grid" id="options-container"></div>
+        </div>
+
+        <!-- find_the_bug: editable code -->
+        <div id="sec-bug" hidden>
+          <div class="editor-header">
+            <span class="editor-label">Buggy Code — edit to fix it</span>
+            <span class="lang-badge" id="bug-lang">python</span>
+            <button class="btn-run" id="btn-run-bug" title="Run your code">▶ Run</button>
+          </div>
+          <div id="bug-editor" style="height:260px"></div>
+          <div id="bug-run-output" class="run-output" hidden>
+            <div class="run-output-header">
+              <span id="bug-run-output-label">Output</span>
+              <button class="run-output-close" id="btn-bug-run-close">✕</button>
+            </div>
+            <pre id="bug-run-output-body"></pre>
+          </div>
+          <p class="editor-hint">Fix the bug directly in the editor above, then submit.</p>
+        </div>
+
+        <!-- coding: editor -->
+        <div id="sec-coding" hidden>
+          <div class="editor-header">
+            <span class="editor-label">Your Solution</span>
+            <span class="lang-badge" id="coding-lang">python</span>
+            <button class="btn-run" id="btn-run-code" title="Run your code">▶ Run</button>
+          </div>
+          <div id="coding-editor" style="height:300px"></div>
+          <div id="run-output" class="run-output" hidden>
+            <div class="run-output-header">
+              <span id="run-output-label">Output</span>
+              <button class="run-output-close" id="btn-run-close">✕</button>
+            </div>
+            <pre id="run-output-body"></pre>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="q-actions" id="q-actions">
+          <button class="btn-primary" id="btn-submit">Submit Answer</button>
+          <button class="btn-defer" id="btn-defer">Do Later ⏭</button>
+        </div>
+
+        <!-- Feedback panel -->
+        <div id="feedback-panel" class="feedback-panel" hidden>
+          <div class="fb-header">
+            <div class="fb-icon" id="fb-icon">✓</div>
+            <div>
+              <div class="fb-title" id="fb-title">Correct!</div>
+              <div class="fb-sub" id="fb-sub"></div>
+            </div>
+          </div>
+          <div class="fb-body">
+            <div class="fb-section">
+              <div class="fb-section-label">Explanation</div>
+              <div class="fb-section-body" id="fb-explanation"></div>
+            </div>
+            <div class="fb-section fb-remember">
+              <div class="fb-section-label">💡 Remember</div>
+              <div class="fb-section-body" id="fb-remember"></div>
+            </div>
+          </div>
+          <div class="fb-actions">
+            <button class="btn-retry" id="btn-retry-question" hidden>↩ Try Again</button>
+            <button class="btn-similar" id="btn-similar">+ Similar Question</button>
+            <button class="btn-primary" id="btn-next">Next Question →</button>
+            <button class="btn-outline" id="btn-finish" hidden>View Summary</button>
+          </div>
+        </div>
+
+      </div><!-- /.q-card -->
+    </main>
+  </div><!-- /.q-layout -->
+
+  <!-- ── Claude Chat Panel ──────────────────────────────────────────────── -->
+  <div id="chat-panel" class="chat-panel" hidden>
+    <div class="chat-header">
+      <span class="chat-title">Ask Claude</span>
+      <button id="chat-close" class="chat-close-btn" title="Close">✕</button>
+    </div>
+    <div class="chat-messages" id="chat-messages"></div>
+    <div class="chat-input-row">
+      <textarea id="chat-input" class="chat-input" placeholder="Ask about this question or concept…" rows="2"></textarea>
+      <button id="chat-mic" class="chat-mic-btn" title="Voice input">🎙</button>
+      <button id="chat-send" class="btn-primary chat-send-btn">Send</button>
+    </div>
+  </div>
+
+  <!-- Floating trigger button -->
+  <button id="chat-fab" class="chat-fab" title="Ask Claude">💬 Ask Claude</button>
+
+</div>
+
+<!-- ═══ SUMMARY VIEW ══════════════════════════════════════════════════════════ -->
+<div id="view-summary" class="view" hidden>
+  <div class="summary-wrap">
+
+    <div class="summary-hero">
+      <div class="score-circle" id="score-circle">
+        <svg viewBox="0 0 120 120" class="circle-svg">
+          <circle class="circle-bg" cx="60" cy="60" r="52"/>
+          <circle class="circle-prog" id="circle-prog" cx="60" cy="60" r="52"/>
+        </svg>
+        <div class="circle-text">
+          <span class="circle-pct" id="circle-pct">0%</span>
+          <span class="circle-lbl">Score</span>
+        </div>
+      </div>
+      <div class="summary-info">
+        <h1 id="summary-title">Session Complete!</h1>
+        <p class="summary-pos" id="summary-pos">—</p>
+        <div class="stat-row">
+          <div class="stat"><span class="stat-n" id="stat-correct">0</span><span class="stat-lbl">Correct</span></div>
+          <div class="stat"><span class="stat-n" id="stat-wrong">0</span><span class="stat-lbl">Wrong</span></div>
+          <div class="stat"><span class="stat-n" id="stat-deferred">0</span><span class="stat-lbl">Deferred</span></div>
+          <div class="stat"><span class="stat-n" id="stat-total">0</span><span class="stat-lbl">Total</span></div>
+        </div>
+        <div class="summary-btns">
+          <button class="btn-primary" id="btn-retry">Practice Again</button>
+          <button class="btn-outline" id="btn-home">← Home</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="review-section">
+      <div class="review-top">
+        <h2>Question Review</h2>
+        <div class="filter-tabs">
+          <button class="filter-tab active" data-f="all">All</button>
+          <button class="filter-tab" data-f="wrong">Wrong Only</button>
+          <button class="filter-tab" data-f="deferred">Deferred</button>
+        </div>
+      </div>
+      <div id="review-list"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Save session modal -->
+<div id="save-session-modal" class="modal-overlay" hidden>
+  <div class="modal-box">
+    <div class="modal-title">Save this session?</div>
+    <p class="modal-body" id="modal-session-desc"></p>
+    <div class="modal-actions">
+      <button class="btn-primary" id="modal-btn-save">Save & Leave</button>
+      <button class="btn-outline" id="modal-btn-discard">Leave without saving</button>
+      <button class="btn-ghost btn-sm" id="modal-btn-cancel">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs/loader.js"></script>
+<script src="/static/app.js?v=11"></script>
+</body>
+</html>

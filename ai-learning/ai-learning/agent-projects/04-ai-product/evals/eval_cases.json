@@ -1,0 +1,39 @@
+[
+  {
+    "id": "quality_threshold",
+    "description": "Both models must meet minimum quality score on benchmark suite",
+    "pass_criteria": {
+      "min_avg_quality": 6.0
+    },
+    "models": ["claude-haiku-4-5-20251001", "claude-sonnet-4-6"]
+  },
+  {
+    "id": "cost_efficiency",
+    "description": "Haiku must be at least 50% cheaper than Sonnet on equivalent tasks",
+    "pass_criteria": {
+      "max_cost_ratio": 0.5
+    }
+  },
+  {
+    "id": "sla_compliance",
+    "description": "P95 latency must be under SLA threshold",
+    "pass_criteria": {
+      "max_p95_latency_ms": 5000
+    }
+  },
+  {
+    "id": "regression_baseline",
+    "description": "Sonnet must pass all regression cases",
+    "pass_criteria": {
+      "min_pass_rate": 1.0
+    },
+    "model": "claude-sonnet-4-6"
+  },
+  {
+    "id": "ab_winner_determination",
+    "description": "A/B experiment on 10 prompts must produce a clear recommendation",
+    "pass_criteria": {
+      "requires_recommendation": true
+    }
+  }
+]
