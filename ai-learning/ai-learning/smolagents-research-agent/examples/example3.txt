@@ -1,0 +1,130 @@
+$ python main.py --verbose "What were the key AI model releases in the first half of 2025, and which company released the most?"
+
+╭─────────────────────────────────────────────────────────────────────────╮
+│               smolagents Research Agent                                 │
+│    Powered by CodeAgent + DuckDuckGoSearchTool + LiteLLM/Claude         │
+╰─────────────────────────────────────────────────────────────────────────╯
+
+╭─────────────────────── Research Question ───────────────────────────────╮
+│ What were the key AI model releases in the first half of 2025, and      │
+│ which company released the most?                                        │
+╰─────────────────────────────────────────────────────────────────────────╯
+
+Model: anthropic/claude-3-5-sonnet-20241022   Max steps: 15
+
+─────────────────────────── Agent Trace ─────────────────────────────────
+
+Step 1 — Thought:
+  This question spans several months and multiple companies. I'll break
+  my searches into targeted queries: one broad overview, then per-company
+  follow-ups for OpenAI, Anthropic, Google, and Meta.
+
+Step 1 — Tool call: DuckDuckGoSearchTool
+  Query: "major AI model releases H1 2025 overview"
+
+Step 1 — Tool result:
+  The first half of 2025 saw an unprecedented number of foundation model
+  releases. OpenAI shipped GPT-4.5 (February) and the o3 reasoning series
+  (March). Anthropic launched Claude 3.7 Sonnet (February) and Claude 4
+  Opus (May). Google DeepMind released Gemini 2.0 Flash (January),
+  Gemini 2.5 Pro (March), and Gemma 3 open weights (March). Meta released
+  Llama 4 Scout and Llama 4 Maverick (April). Mistral AI released
+  Mistral Large 2.1 (January) and Codestral 2 (March).
+  (Source: TechCrunch AI roundup, The Verge)
+
+Step 2 — Thought:
+  Good overview. Let me search specifically for OpenAI releases to make
+  sure I have a complete count.
+
+Step 2 — Tool call: DuckDuckGoSearchTool
+  Query: "OpenAI model releases 2025 January to June complete list"
+
+Step 2 — Tool result:
+  OpenAI's H1 2025 releases included: o3-mini (January), GPT-4.5 (February),
+  o3 and o4-mini (March), GPT-4o with enhanced vision (April), and
+  GPT-4.1 API series (May). That totals approximately 6-7 distinct model
+  releases or major model updates.
+
+Step 3 — Thought:
+  Now let me check Google specifically — they have DeepMind + Google AI
+  Studio products.
+
+Step 3 — Tool call: DuckDuckGoSearchTool
+  Query: "Google DeepMind Gemini model releases first half 2025"
+
+Step 3 — Tool result:
+  Google released Gemini 2.0 Flash (January), Gemini 2.0 Pro Experimental
+  (February), Gemini 2.5 Pro (March), Gemini 2.5 Flash (May), and
+  Gemma 3 open-weights family in March (8B, 27B variants). That puts
+  Google/DeepMind at 5+ releases in H1 2025.
+
+Step 4 — Thought:
+  I now have enough data to summarise per company. Let me use Python to
+  tally the counts clearly.
+
+Step 4 — Code execution:
+  ```python
+  releases = {
+      "OpenAI":    ["o3-mini", "GPT-4.5", "o3", "o4-mini", "GPT-4o vision update", "GPT-4.1 series"],
+      "Google":    ["Gemini 2.0 Flash", "Gemini 2.0 Pro Exp", "Gemini 2.5 Pro", "Gemini 2.5 Flash", "Gemma 3"],
+      "Anthropic": ["Claude 3.7 Sonnet", "Claude 3.7 Sonnet Extended Thinking", "Claude 4 Opus"],
+      "Meta":      ["Llama 4 Scout", "Llama 4 Maverick"],
+      "Mistral":   ["Mistral Large 2.1", "Codestral 2"],
+  }
+
+  for company, models in sorted(releases.items(), key=lambda x: -len(x[1])):
+      print(f"{company:12s}: {len(models)} releases — {', '.join(models)}")
+
+  leader = max(releases, key=lambda c: len(releases[c]))
+  print(f"\nLeader: {leader} with {len(releases[leader])} notable releases")
+  ```
+
+  Output:
+  OpenAI      : 6 releases — o3-mini, GPT-4.5, o3, o4-mini, GPT-4o vision update, GPT-4.1 series
+  Google      : 5 releases — Gemini 2.0 Flash, Gemini 2.0 Pro Exp, Gemini 2.5 Pro, Gemini 2.5 Flash, Gemma 3
+  Anthropic   : 3 releases — Claude 3.7 Sonnet, Claude 3.7 Sonnet Extended Thinking, Claude 4 Opus
+  Meta        : 2 releases — Llama 4 Scout, Llama 4 Maverick
+  Mistral     : 2 releases — Mistral Large 2.1, Codestral 2
+
+  Leader: OpenAI with 6 notable releases
+
+Step 5 — Thought:
+  Great. I have a clear picture. Let me write the final answer.
+
+────────────────────────────────────────────────────────────────────────
+
+╭────────────────────────── Final Answer ─────────────────────────────────╮
+│                                                                         │
+│ Key AI Model Releases — H1 2025                                         │
+│                                                                         │
+│ OpenAI (6 releases) — most prolific                                     │
+│   • o3-mini (Jan) — efficient reasoning model for coding & math         │
+│   • GPT-4.5 (Feb) — improved factuality and instruction following       │
+│   • o3 & o4-mini (Mar) — flagship reasoning models                      │
+│   • GPT-4o vision update (Apr) — enhanced image understanding           │
+│   • GPT-4.1 API series (May) — faster, cheaper for developers           │
+│                                                                         │
+│ Google / DeepMind (5 releases)                                          │
+│   • Gemini 2.0 Flash (Jan) — fast multimodal model                      │
+│   • Gemini 2.0 Pro Experimental (Feb)                                   │
+│   • Gemini 2.5 Pro (Mar) — top benchmark scores, long context           │
+│   • Gemini 2.5 Flash (May) — cost-efficient variant                     │
+│   • Gemma 3 (Mar) — open-weight models (8B, 27B)                        │
+│                                                                         │
+│ Anthropic (3 releases)                                                  │
+│   • Claude 3.7 Sonnet (Feb) — hybrid reasoning model                    │
+│   • Claude 3.7 Sonnet Extended Thinking (Feb) — deeper reasoning        │
+│   • Claude 4 Opus (May) — most capable Claude to date                   │
+│                                                                         │
+│ Meta (2 releases)                                                       │
+│   • Llama 4 Scout & Maverick (Apr) — open-weight multimodal models      │
+│                                                                         │
+│ Mistral (2 releases)                                                    │
+│   • Mistral Large 2.1 (Jan) & Codestral 2 (Mar)                        │
+│                                                                         │
+│ Winner: OpenAI led H1 2025 with 6 notable model releases, followed     │
+│ closely by Google with 5. The period was defined by reasoning models    │
+│ (o3, Gemini 2.5, Claude 3.7) and a new wave of open-weight releases    │
+│ from Meta and Google.                                                   │
+│                                                                         │
+╰─────────────────────────────────────────────────────────────────────────╯

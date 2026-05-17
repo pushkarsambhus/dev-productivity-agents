@@ -1,0 +1,46 @@
+$ python main.py "What are the top 3 programming languages in 2025 and what are their main use cases?"
+
+╭─────────────────────────────────────────────────────────────────────────╮
+│               smolagents Research Agent                                 │
+│    Powered by CodeAgent + DuckDuckGoSearchTool + LiteLLM/Claude         │
+╰─────────────────────────────────────────────────────────────────────────╯
+
+╭─────────────────────── Research Question ───────────────────────────────╮
+│ What are the top 3 programming languages in 2025 and what are their     │
+│ main use cases?                                                         │
+╰─────────────────────────────────────────────────────────────────────────╯
+
+Model: anthropic/claude-3-5-sonnet-20241022   Max steps: 15
+
+⠋ Agent is thinking...
+
+╭────────────────────────── Final Answer ─────────────────────────────────╮
+│                                                                         │
+│ The top 3 programming languages in 2025, according to the TIOBE Index,  │
+│ Stack Overflow Developer Survey, and GitHub Octoverse, are:             │
+│                                                                         │
+│ 1. Python                                                               │
+│    Python holds the #1 spot for the fourth consecutive year. Its main   │
+│    use cases span data science, machine learning and AI (TensorFlow,    │
+│    PyTorch, scikit-learn), web back-ends (Django, FastAPI), scripting,  │
+│    automation, and scientific computing. Python is the de-facto         │
+│    language for AI/ML research and is widely taught as a first          │
+│    language.                                                            │
+│                                                                         │
+│ 2. JavaScript / TypeScript                                              │
+│    JavaScript (and its typed superset TypeScript) remains the dominant  │
+│    language of the web. Primary use cases: front-end web development    │
+│    (React, Vue, Svelte), full-stack development (Node.js, Next.js),     │
+│    mobile apps (React Native), and serverless / edge functions.         │
+│    TypeScript adoption continued to surge in 2024-2025, with most       │
+│    large codebases migrating away from plain JavaScript.                │
+│                                                                         │
+│ 3. Rust                                                                 │
+│    Rust entered the top 3 in 2025 for the first time, displacing Java. │
+│    It is the preferred choice for systems programming, embedded         │
+│    development, WebAssembly, game engines, and performance-critical     │
+│    cloud infrastructure. Its memory-safety guarantees without a GC      │
+│    have driven adoption by companies like Google, Microsoft, and Meta,  │
+│    and it is now officially supported in the Linux kernel.              │
+│                                                                         │
+╰─────────────────────────────────────────────────────────────────────────╯

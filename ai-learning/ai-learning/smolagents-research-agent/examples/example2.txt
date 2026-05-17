@@ -1,0 +1,89 @@
+$ python main.py --verbose "Compare the market cap of Apple and Microsoft as of early 2025 and calculate the percentage difference"
+
+╭─────────────────────────────────────────────────────────────────────────╮
+│               smolagents Research Agent                                 │
+│    Powered by CodeAgent + DuckDuckGoSearchTool + LiteLLM/Claude         │
+╰─────────────────────────────────────────────────────────────────────────╯
+
+╭─────────────────────── Research Question ───────────────────────────────╮
+│ Compare the market cap of Apple and Microsoft as of early 2025 and      │
+│ calculate the percentage difference                                      │
+╰─────────────────────────────────────────────────────────────────────────╯
+
+Model: anthropic/claude-3-5-sonnet-20241022   Max steps: 15
+
+─────────────────────────── Agent Trace ─────────────────────────────────
+
+Step 1 — Thought:
+  I need to find the current market capitalisations of Apple (AAPL) and
+  Microsoft (MSFT) as of early 2025. Let me search for each separately.
+
+Step 1 — Tool call: DuckDuckGoSearchTool
+  Query: "Apple market cap January 2025"
+
+Step 1 — Tool result:
+  Apple Inc. market capitalization reached approximately $3.77 trillion in
+  January 2025, making it the most valuable publicly traded company in the
+  world. (Source: companiesmarketcap.com, Bloomberg)
+
+Step 2 — Thought:
+  Good. Now let me get Microsoft's market cap for the same period.
+
+Step 2 — Tool call: DuckDuckGoSearchTool
+  Query: "Microsoft market cap January 2025"
+
+Step 2 — Tool result:
+  Microsoft's market capitalisation stood at around $3.12 trillion in
+  January 2025, placing it as the second most valuable public company.
+  (Source: Statista, companiesmarketcap.com)
+
+Step 3 — Thought:
+  I now have both figures. Let me write Python code to compute the
+  percentage difference between Apple and Microsoft's market caps.
+
+Step 3 — Code execution:
+  ```python
+  apple_market_cap_trillion  = 3.77   # USD trillions, Jan 2025
+  msft_market_cap_trillion   = 3.12   # USD trillions, Jan 2025
+
+  difference = apple_market_cap_trillion - msft_market_cap_trillion
+  pct_diff_over_msft = (difference / msft_market_cap_trillion) * 100
+  pct_diff_over_apple = (difference / apple_market_cap_trillion) * 100
+
+  print(f"Apple market cap : ${apple_market_cap_trillion:.2f}T")
+  print(f"Microsoft market cap: ${msft_market_cap_trillion:.2f}T")
+  print(f"Absolute difference : ${difference:.2f}T")
+  print(f"Apple is {pct_diff_over_msft:.1f}% larger than Microsoft")
+  print(f"Microsoft is {pct_diff_over_apple:.1f}% smaller than Apple")
+  ```
+
+  Output:
+  Apple market cap      : $3.77T
+  Microsoft market cap  : $3.12T
+  Absolute difference   : $0.65T
+  Apple is 20.8% larger than Microsoft
+  Microsoft is 17.2% smaller than Apple
+
+Step 4 — Thought:
+  I have all the data I need. I can now give a clear final answer.
+
+────────────────────────────────────────────────────────────────────────
+
+╭────────────────────────── Final Answer ─────────────────────────────────╮
+│                                                                         │
+│ Market Cap Comparison — Apple vs. Microsoft (Early 2025)                │
+│                                                                         │
+│  Company    │ Market Cap (Jan 2025)                                     │
+│  Apple      │ ~$3.77 trillion                                           │
+│  Microsoft  │ ~$3.12 trillion                                           │
+│                                                                         │
+│ Difference: $0.65 trillion                                              │
+│                                                                         │
+│ Apple's market cap is approximately 20.8% larger than Microsoft's.      │
+│ Conversely, Microsoft's market cap is about 17.2% smaller than Apple's. │
+│                                                                         │
+│ Apple retained its position as the world's most valuable company in     │
+│ early 2025, driven by strong iPhone 16 sales, Services revenue growth,  │
+│ and anticipation around Apple Intelligence AI features.                 │
+│                                                                         │
+╰─────────────────────────────────────────────────────────────────────────╯
