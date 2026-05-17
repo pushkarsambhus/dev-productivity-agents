@@ -1,51 +1,48 @@
 # Dev Productivity Agents
 
-This repo explores how **AI/ML can transform developer productivity** by building lightweight agents that reduce manual toil in the software development lifecycle:
-- **Build Fixer Agent** → triages noisy CI logs and suggests actionable fixes.
-- **Test Suggestion Agent** → proposes tests from code diffs to improve coverage.
+[![CI](https://github.com/pushkarsambhus/dev-productivity-agents/actions/workflows/ci.yml/badge.svg)](https://github.com/pushkarsambhus/dev-productivity-agents/actions/workflows/ci.yml)
 
-The focus is on blending **rule-based heuristics** with **optional AI enrichment** to provide reliable, scalable helpers for developers. The agents are simple prototypes, but they demonstrate how intelligent automation can accelerate common engineering workflows.
+Lightweight AI agents that cut developer toil in CI/CD pipelines. Two agents, heuristics-first with optional LLM enrichment:
 
-## Why This Project
-- Engineers often spend significant time debugging builds and writing repetitive tests.
-- These prototypes show how **automation + AI agents** can reduce friction and speed up delivery.
+- **Build Fixer Agent** — triages noisy CI logs and surfaces actionable root-cause suggestions
+- **Test Suggestion Agent** — proposes test cases from code diffs to improve coverage
 
-### Why This Matters
-Build failures and pipeline issues often waste hours of developer time. By automating triage and test case suggestions, this project reduces manual toil, accelerates CI/CD cycles, and improves developer productivity across large teams.
+Inspired by a production system that reduced build failure triage from 20+ minutes to near-immediate results across 60+ engineering teams.
 
-### Trade-offs & Design Choices
-- **Heuristics-first:** Designed to provide quick, offline answers; optional LLM integration adds richer suggestions but requires cost/API keys.
-- **Slack + API integration:** Chosen for accessibility; in production, this would extend to other collaboration tools and dashboards.
-- **Scope:** Prototype-level agent; production deployments would need stronger observability and caching.
+## Stack
 
+Python · FastAPI · OpenAI API (optional)
 
-![CI](https://github.com/pushkarsambhus/dev-productivity-agents/actions/workflows/ci.yml/badge.svg)
+## Quick start
 
-## Quick Start
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
+python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 
-# (Optional) set your API key
-export OPENAI_API_KEY=sk-...
+export OPENAI_API_KEY=sk-...   # optional — heuristics work without it
 
-# Run the API
 uvicorn app.main:app --reload
 ```
 
-Example requests:
+## Example requests
+
 ```bash
-curl -X POST http://127.0.0.1:8000/triage -H "Content-Type: application/json" -d @examples/sample_logs/npm_fail.json
-curl -X POST http://127.0.0.1:8000/suggest-tests -H "Content-Type: application/json" -d '{"repo":"example-service","diff":"added endpoint /users"}'
+# Triage a CI log
+curl -X POST http://localhost:8000/triage \
+  -H "Content-Type: application/json" \
+  -d @examples/sample_logs/npm_fail.json
+
+# Suggest tests for a diff
+curl -X POST http://localhost:8000/suggest-tests \
+  -H "Content-Type: application/json" \
+  -d '{"repo": "example-service", "diff": "added endpoint /users"}'
 ```
 
-## Next Steps
-- Integrate with Slack as a slash command (`/triage`)
-- Expand to other ecosystems (Gradle, Docker builds, PyPI errors)
-- Experiment with LangGraph for multi-agent orchestration
-- Explore how this approach scales in enterprise CI/CD pipelines
+## Design notes
 
----
+- **Heuristics-first** — fast, offline answers by default; LLM adds richer context when an API key is present
+- **Prototype scope** — production deployments would add observability, caching, and multi-ecosystem support (Gradle, Docker, PyPI)
 
-**License**: MIT  
+## License
+
+MIT
