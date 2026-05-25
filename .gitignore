@@ -6,3 +6,17 @@ __pycache__/
 .DS_Store
 .claude/
 node_modules/
+
+# Separate projects that live in the same parent folder — not part of this repo
+stock_tool/
+react-agent-api/
+smolagents-research-agent/
+CLAUDE.md
+LICENSE
+
+# Untracked ai-learning sub-projects
+ai-learning/ai-learning/interview-portal/
+ai-learning/ai-learning/job-search-dashboard/
+ai-learning/ai-learning/agent-projects/
+ai-learning/ai-learning/gym-tracker/
+ai-learning/ai-learning/learnpython/
